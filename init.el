@@ -91,6 +91,20 @@ If the file does not exist, it will be created at the specified directory."
 (gp/set-hook-on-modes gp/electric-pair-enabled-modes
 		      (lambda () (electric-pair-local-mode 1)))
 
+(defcustom gp/auto-fill-enabled-modes
+  '(org-mode-hook
+    text-mode-hook)
+  "A list of modes that will have `auto-fill-mode' enabled by default"
+  :type 'list
+  :set (lambda (SYMBOL VALUE)
+	 (set-default-toplevel-value SYMBOL VALUE)
+	 (gp/set-hook-on-modes
+	  gp/auto-fill-enabled-modes
+	  (lambda () (auto-fill-mode 1)))))
+
+(gp/set-hook-on-modes gp/electric-pair-enabled-modes
+			(lambda () (auto-fill-mode 1)))
+
 (defvar elpaca-installer-version 0.7)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
@@ -579,6 +593,17 @@ If the file does not exist, it will be created at the specified directory."
 (add-hook 'org-mode-hook
 	  (lambda () (add-hook 'after-save-hook #'gp/org-babel-tangle-config )))
 
+(use-package transient) ;; Fix a weird bug with elpaca
+(use-package magit
+  :commands (magit-status magit-dispatch magit-file-dispatch)
+  :general
+  (gp/leader-keys
+    "g" '(:ignore t :which-key "git")
+    "gs" '(magit-status :which-key "git status")
+    "gg" '(magit :which-key "git open")
+    "gd" '(magit-dispatch :which-key "git dispatch")
+    "gf" '(magit-file-dispatch :which-key "git file dispatch")))
+
 (scroll-bar-mode -1)    ; Disable visual scrollbar
 (tool-bar-mode -1)      ; Disable toolbar
 (tooltip-mode -1)       ; Disable tooltips
@@ -627,16 +652,5 @@ If the file does not exist, it will be created at the specified directory."
 
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
-
-(use-package transient)
-(use-package magit
-  :commands (magit-status magit-dispatch magit-file-dispatch)
-  :general
-  (gp/leader-keys
-    "g" '(:ignore t :which-key "git")
-    "gs" '(magit-status :which-key "git status")
-    "gg" '(magit :which-key "git open")
-    "gd" '(magit-dispatch :which-key "git dispatch")
-    "gf" '(magit-file-dispatch :which-key "git file dispatch")))
 
 (setq gc-cons-threshhold (* 2 1000 1000))

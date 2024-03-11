@@ -172,6 +172,24 @@ Again, we will set the hooks properly.
   (gp/set-hook-on-modes gp/electric-pair-enabled-modes
 			(lambda () (electric-pair-local-mode 1)))
 #+end_src
+** Auto-Fill mode
+Similar to [[Line Numbers]] and [[Electric Parenthesis]], we will add a hook
+for =auto-fill-mode= to proc on text buffers.
+#+begin_src emacs-lisp
+  (defcustom gp/auto-fill-enabled-modes
+    '(org-mode-hook
+      text-mode-hook)
+    "A list of modes that will have `auto-fill-mode' enabled by default"
+    :type 'list
+    :set (lambda (SYMBOL VALUE)
+	   (set-default-toplevel-value SYMBOL VALUE)
+	   (gp/set-hook-on-modes
+	    gp/auto-fill-enabled-modes
+	    (lambda () (auto-fill-mode 1)))))
+
+  (gp/set-hook-on-modes gp/electric-pair-enabled-modes
+			  (lambda () (auto-fill-mode 1)))
+#+end_src
 * Package Setup
 In this configuration we are planning on using [[https://github.com/progfolio/elpaca][Elpaca]] for package
 management needs. First, we will disable the standard package.el. We
@@ -773,6 +791,22 @@ executed for every single change in the config.
 	    (lambda () (add-hook 'after-save-hook #'gp/org-babel-tangle-config )))
 
 #+end_src
+* Git
+We use [[https://magit.vc/][Magit]] to manage git in this configuration, as it is easily the
+best Git implementation currently available.
+#+begin_src emacs-lisp
+  (use-package transient) ;; Fix a weird bug with elpaca
+  (use-package magit
+    :commands (magit-status magit-dispatch magit-file-dispatch)
+    :general
+    (gp/leader-keys
+      "g" '(:ignore t :which-key "git")
+      "gs" '(magit-status :which-key "git status")
+      "gg" '(magit :which-key "git open")
+      "gd" '(magit-dispatch :which-key "git dispatch")
+      "gf" '(magit-file-dispatch :which-key "git file dispatch")))
+
+#+end_src
 * Themeing
 ** Minimal Setup
 Here are some configuration to disable the ugly menu bars, scroll
@@ -846,22 +880,6 @@ programming mode.
 #+begin_src emacs-lisp
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
-#+end_src
-* Git
-We use [[https://magit.vc/][Magit]] to manage git in this configuration, as it is easily the
-best Git implementation currently available.
-#+begin_src emacs-lisp
-  (use-package transient)
-  (use-package magit
-    :commands (magit-status magit-dispatch magit-file-dispatch)
-    :general
-    (gp/leader-keys
-      "g" '(:ignore t :which-key "git")
-      "gs" '(magit-status :which-key "git status")
-      "gg" '(magit :which-key "git open")
-      "gd" '(magit-dispatch :which-key "git dispatch")
-      "gf" '(magit-file-dispatch :which-key "git file dispatch")))
-
 #+end_src
 * Reset Garbage Collection 
 *WARNING*: THIS SHOULD ALWAYS BE AT THE END OF THE CONFIG!

@@ -233,9 +233,9 @@ If the file does not exist, it will be created at the specified directory."
     ;; Project management
     ;; NOTE: For some reason I can't get the 'project-prefix-map' to work properly
     ;; with this keybinding, so instead this simulate key is used instead. 
-    "p" (general-simulate-key "C-x p" :which-key "project")
-    "SPC" '(project-find-file :which-key "Find Project Files")
-    "C-SPC" '(project-find-file :which-key "Find Project Files")
+    "p" '(projectile-command-map :which-key "project")
+    "SPC" '(projectile-find-file :which-key "Find Project Files")
+    "C-SPC" '(projectile-find-file :which-key "Find Project Files")
 
     ;; Open utilities
     "o" '(:ignore t :which-key "open")
@@ -478,11 +478,19 @@ If the file does not exist, it will be created at the specified directory."
   ;;;; 3. locate-dominating-file
   ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
   ;;;; 4. projectile.el (projectile-project-root)
-  ;; (autoload 'projectile-project-root "projectile")
-  ;; (setq consult-project-function (lambda (_) (projectile-project-root)))
+  (autoload 'projectile-project-root "projectile")
+  (setq consult-project-function (lambda (_) (projectile-project-root)))
   ;;;; 5. No project support
   ;; (setq consult-project-function nil)
 )
+
+(use-package projectile
+  :diminish projectile-mode
+  :config (projectile-mode 1)
+  :init
+  (when (file-directory-p "~/Projects")
+    (setq projectile-project-search-path '( "~/Projects")))
+  (setq projectile-switch-project-action #'projectile-dired))
 
 (use-package org
   :ensure nil

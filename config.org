@@ -1,0 +1,107 @@
+# -*- electric-pair-mode: nil-*-
+#+title Modern Emacs Configuration
+#+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
+#+STARTUP: overview
+
+* Initialization
+Here are some basic steps that must be done to initialize the Emacs
+Config. In this case, the garbage collection threshold is increased so
+that the configuration can load everything more efficiently 
+#+begin_src emacs-lisp
+  (setq gc-cons-threshhold (* 50 1000 1000))
+#+end_src
+
+
+** Basic Settings
+Here are some basic utility settings we want enabled in this
+configuration.
+
+This mutes the annoying warnings that appear from native
+compilation. The settings will still be logged in a special buffer,
+but they won't pop up and constantly flood the screen.
+#+begin_src emacs-lisp
+  (setq native-comp-async-report-warnings-errors 'silent)
+#+end_src
+
+Sets the default email address of this configuration
+#+begin_src emacs-lisp
+  (setq user-mail-address "georgenpadron@gmail.com")
+#+end_src
+
+Disables the startup message.
+#+begin_src emacs-lisp
+(setq inhibit-startup-message t)
+#+end_src
+
+Automatically reverts buffers anytime there is a change to the file
+system outside of Emacs.
+#+begin_src emacs-lisp
+  (global-auto-revert-mode 1) ; Revert buffers when underlying file changes
+  (setq global-auto-revert-non-file-buffers t) ; Revert Dired and other buffers
+#+end_src
+
+Enables file history. 
+#+begin_src emacs-lisp
+  (recentf-mode 1) ; Enable file history
+#+end_src
+** Custom Global Variables
+Some important global variables that are to be used throughout this configuration.
+#+begin_src emacs-lisp
+  (defvar config-path "~/.config/emacs-new"
+    "The default path of all of the init.el configuration files within
+  this Emacs config. Useful when calling Emacs from an altered
+  config directory using `init-directory'.")
+#+end_src
+* Org
+** Babel Tangle
+*** Auto-tangle Configuration file
+The following code automatically tangles this /config.org/ file every
+time it is saved. That way, =org-babel-tangle= doesn't have to be
+executed for every single change in the config.
+#+begin_src emacs-lisp
+  (defun gp/org-babel-tangle-config ()
+    (when (string-equal (buffer-file-name)
+			(expand-file-name (concat config-path "/config.org")))
+      ;; Dynamic Scoping
+      (let ((org-confirm-babel-evaluate nil))
+	(org-babel-tangle))))
+
+  ;; Hook it
+  (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'gp/org-babel-tangle-config )))
+
+#+end_src
+* Themeing
+** Minimal Setup
+Here are some configuration to disable the ugly menu bars, scroll
+bars, and more. 
+#+begin_src emacs-lisp
+  (scroll-bar-mode -1)    ; Disable visual scrollbar
+  (tool-bar-mode -1)      ; Disable toolbar
+  (tooltip-mode -1)       ; Disable tooltips
+  (menu-bar-mode -1)      ; Disable menubar
+  (set-fringe-mode 10)    ; Fringes on the sides
+  (setq use-dialog-box nil) ; Don't pop up UI dialogs when prompting
+#+end_src
+
+Here is some more configuration for the /tab bar/. 
+#+begin_src emacs-lisp
+  (setq tab-bar-show 1 ; Show tab bar only when more than 1 tab present
+	tab-bar-new-button-show nil ; Disable new and close button on tab bar
+	tab-bar-close-button-show nil
+	tab-bar-auto-width nil) ; Make tab-bar width change dynamically 
+#+end_src
+
+** Precision Pixel Scrolling
+The following setting makes scrolling feel really good
+#+begin_src emacs-lisp
+  (pixel-scroll-precision-mode)
+#+end_src
+
+* Runtime Performance
+*NOTE*: THIS SHOULD ALWAYS BE AT THE END OF THE CONFIG!
+
+Here we dial back the garbage collection so that it happens at a more
+reasonable time.
+#+begin_src emacs-lisp
+(setq gc-cons-threshhold (* 2 1000 1000))
+#+end_src

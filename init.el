@@ -34,7 +34,7 @@ If the file does not exist, it will be created at the specified directory."
     (add-hook mode function)))
 
 (setq custom-file (gp/config-path-file-expand "custom.el"))
-(load custom-file)
+(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
 
 (setq backup-by-copying t     ; don't fuck-up symlinks
    backup-directory-alist
@@ -289,12 +289,16 @@ If the file does not exist, it will be created at the specified directory."
    "gc" 'evilnc-comment-operator
    "gy" 'evilnc-yank-and-comment-operator))
 
-(use-package evil-nerd-commenter
-  :general
-  (general-define-key
-   :states 'motion
-   "gc" 'evilnc-comment-operator
-   "gy" 'evilnc-yank-and-comment-operator))
+(use-package evil-snipe
+  :diminish
+  :after evil
+  :config
+  (evil-snipe-mode 1)
+  (evil-snipe-override-mode 1)
+  ; Set the scope of searches and repeated searches
+  (setq evil-snipe-scope 'line)
+  (setq evil-snipe-repeat-scope 'visible)
+  (setq evil-snipe-spillover-scope 'whole-visible))
 
 (use-package evil-multiedit
   :after evil
@@ -345,7 +349,9 @@ If the file does not exist, it will be created at the specified directory."
   (completion-styles '(orderless basic))
   (completion-category-overrides '((file (styles basic partial-completion)))))
 
-; CORFU COMPLETION
+;; Enable icons for corfu. 
+(use-package nerd-icons-corfu
+  :after corfu)
 (use-package corfu
   :custom
   (corfu-cycle t) ; Allows cycling through candidates
@@ -367,7 +373,51 @@ If the file does not exist, it will be created at the specified directory."
   ;; Save completion history for better sorting
   (corfu-history-mode)
   ;; Pop-up documentation by hitting `M-h'. 
-  (corfu-popupinfo-mode))
+  (corfu-popupinfo-mode)
+  (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+
+(use-package corfu-terminal 
+  :if (not (display-graphic-p))
+  :config (corfu-terminal-mode 1))
+
+(use-package cape
+  ;; Bind dedicated completion commands
+  ;; Alternative prefix keys: C-c p, M-p, M-+, ...
+  ;; :bind (("C-c p p" . completion-at-point) ;; capf
+  ;;        ("C-c p t" . complete-tag)        ;; etags
+  ;;        ("C-c p d" . cape-dabbrev)        ;; or dabbrev-completion
+  ;;        ("C-c p h" . cape-history)
+  ;;        ("C-c p f" . cape-file)
+  ;;        ("C-c p k" . cape-keyword)
+  ;;        ("C-c p s" . cape-elisp-symbol)
+  ;;        ("C-c p e" . cape-elisp-block)
+  ;;        ("C-c p a" . cape-abbrev)
+  ;;        ("C-c p l" . cape-line)
+  ;;        ("C-c p w" . cape-dict)
+  ;;        ("C-c p :" . cape-emoji)
+  ;;        ("C-c p \\" . cape-tex)
+  ;;        ("C-c p _" . cape-tex)
+  ;;        ("C-c p ^" . cape-tex)
+  ;;        ("C-c p &" . cape-sgml)
+  ;;        ("C-c p r" . cape-rfc1345))
+  :init
+  ;; Add to the global default value of `completion-at-point-functions' which is
+  ;; used by `completion-at-point'.  The order of the functions matters, the
+  ;; first function returning a result wins.  Note that the list of buffer-local
+  ;; completion functions takes precedence over the global list.
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  (add-to-list 'completion-at-point-functions #'cape-elisp-block)
+  ;;(add-to-list 'completion-at-point-functions #'cape-history)
+  ;;(add-to-list 'completion-at-point-functions #'cape-keyword)
+  ;;(add-to-list 'completion-at-point-functions #'cape-tex)
+  ;;(add-to-list 'completion-at-point-functions #'cape-sgml)
+  ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345)
+  ;;(add-to-list 'completion-at-point-functions #'cape-abbrev)
+  (add-to-list 'completion-at-point-functions #'cape-dict)
+  ;;(add-to-list 'completion-at-point-functions #'cape-elisp-symbol)
+  ;;(add-to-list 'completion-at-point-functions #'cape-line)
+)
 
 (use-package consult
   :bind (;; C-c bindings in `mode-specific-map'
@@ -497,8 +547,8 @@ If the file does not exist, it will be created at the specified directory."
   :preface
   (defvar gp/org-directory "~/Documents/org"
     "Directory of org files within this configuration")
-  :hook
-  (org-mode . flyspell-mode)
+  ;; :hook
+  ;; (org-mode . flyspell-mode)
   :commands
   (org-timer-set-timer)
   :general
@@ -612,6 +662,97 @@ If the file does not exist, it will be created at the specified directory."
     "gd" '(magit-dispatch :which-key "git dispatch")
     "gf" '(magit-file-dispatch :which-key "git file dispatch")))
 
+(use-package helpful
+  :bind
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-command] . helpful-command)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-key] . helpful-key)
+  ([remap describe-symbol] . helpful-symbol))
+
+(use-package jinx
+  :hook
+  ((prog-mode text-mode org-mode conf-mode) .
+   jinx-mode)
+  :bind (:map jinx-mode-map
+	      ("C-;" . jinx-correct)
+	      ("M-$" . jinx-correct)
+	      ("C-M-$" . jinx-languages)))
+
+(use-package password-store
+  :defer)
+
+(use-package pdf-tools
+  :init
+  (pdf-loader-install))
+
+;;; UTILITY FUNCTIONS FOR DEALING WITH ARCH/PACMAN
+
+;; NOTE: These functions are all run utilizing the yay package
+;; which can be downloaded from the AUR
+;; THEY WILL NOT WORK WITHOUT YAY INSTALLED
+
+(defvar gp/sudo-program "sudo"
+  "A string referring to the command to be used by arch package install commands")
+;; (setq gp/sudo-program "doas")
+
+(defvar gp/arch-use-yay t
+  "Use yay for arch commands if installed")
+
+(defun gp/arch-update ()
+  "Runs the pacman/yay shell command to automatically update the system on Arch Linux"
+  (interactive)
+  (gp/arch-command "-Syyu" nil))
+
+(defun gp/arch-install (program)
+  "Runs the Yay shell command to install the inputted program"
+  (interactive "MProgram Name: ")
+  (gp/arch-command "-S" program))
+
+(defun gp/arch-uninstall (program)
+  "Runs the shell command to delete the inputted program"
+  (interactive "MProgram Name: ")
+  (gp/arch-command "-Rns" program))
+
+(defun gp/arch-search (query)
+  "Runs pacman -Ss utilizing the inputted query"
+  (interactive "MQuery: ")
+  (gp/arch-command "-Ss" query))
+
+(defun gp/arch-query (query)
+  "Runs pacman -Qs utilizing the inputted query"
+  (interactive "MQuery: ")
+  (gp/arch-command "-Qs" query))
+
+(defun gp/arch-find-package-with-file (file)
+  "Runs pacman -F to search for package containing `file'"
+  (interactive "MQuery: ")
+  (gp/arch-command "-F" file))
+
+(defun gp/arch-update-file-database (file)
+  "Runs pacman -Fy to update the file database"
+  (interactive)
+  (gp/arch-command "-Fy" nil))
+
+
+(defun gp/arch-command (args programs)
+  "Runs either arch or pacman with `gp/sudo-program', with the specified args and programs
+If programs is nil, it will act as if nothing is there."
+  (let ((pacman-executable (if (and (executable-find "yay") gp/arch-use-yay)
+			       (format "yay --sudo %s" gp/sudo-program)
+			     (format "%s pacman" gp/sudo-program))))
+    (async-shell-command (concat pacman-executable " " args " " programs))))
+
+(gp/leader-keys
+  "a" '(:ignore t :which-key "arch")
+  "au" '(gp/arch-update :which-key "Arch Update")
+  "ai" '(gp/arch-install :which-key "Arch Install")
+  "ad" '(gp/arch-uninstall :which-key "Arch Delete")
+  "as" '(gp/arch-search :which-key "Arch Search")
+  "ay" '(gp/arch-update-file-database :which-key "Arch Update File Database")
+  "af" '(gp/arch-find-package-with-file :which-key "Arch Find Package With File")
+  "aq" '(gp/arch-query :which-key "Arch Query"))
+
 (scroll-bar-mode -1)    ; Disable visual scrollbar
 (tool-bar-mode -1)      ; Disable toolbar
 (tooltip-mode -1)       ; Disable tooltips
@@ -635,7 +776,13 @@ If the file does not exist, it will be created at the specified directory."
 (use-package catppuccin-theme
   :init (load-theme 'catppuccin :no-confirm))
 
-(pixel-scroll-precision-mode)
+(use-package doom-modeline
+  :custom
+  (doom-modeline-icon t)
+  (doom-modeline-enable-word-count nil)
+  :init (doom-modeline-mode 1)
+  :config
+  (display-battery-mode 1))
 
 (defvar gp/background-opacity 75
   "The default opacity of the background when transparency mode is toggled on.")
@@ -660,5 +807,109 @@ If the file does not exist, it will be created at the specified directory."
 
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
+
+(pixel-scroll-precision-mode)
+
+(use-package mu4e
+  ;; Mu is a package installed /outside/ of emacs
+  :ensure nil
+  :bind
+  ("C-c o m" . mu4e)
+  :config
+  ;; This is set to 't' to avoid mail syncing issues when using mbsync
+  (setq mu4e-change-filenames-when-moving t
+	mu4e-use-maildirs-extension nil)
+
+
+  ;; Referesh mail using isync every 10 minutes
+  ;; NOTE: This is disabled in this config as this is being handled instead
+  ;; by a bash script
+  (setq mu4e-update-interval (* 10 60)
+	mu4e-get-mail-command "mbsync -a"
+	mu4e-maildir "~/.local/share/mail")
+
+  ;; Configuring SMTP to work properly with gmail
+  (setq message-send-mail-function 'smtpmail-send-it
+	starttls-use-gnutls t
+	smtpmail-starttls-credentials '(("smtp.gmail.com" 587 nil nil))
+	smtpmail-smtp-server "smtp.gmail.com"
+	smtpmail-default-smtp-server "smtp.gmail.com"
+	smtpmail-smtp-service 587)
+
+  ;; Enable authentication via `pass' 
+  (auth-source-pass-enable)
+  (setq auth-sources '(password-store))
+  (setq auth-source-debug t)
+
+  (setq mu4e-contexts
+	(list
+	 ;; Personal Account
+	 (make-mu4e-context
+	  :name "Professional"
+	  :match-func
+	  (lambda (msg)
+	    (when msg
+	      (string-prefix-p "/georgenpadron@gmail.com" (mu4e-message-field msg :maildir))))
+	  :vars '((user-mail-address . "georgenpadron@gmail.com")
+		  (user-full-name . "George N Padron")
+		  (mu4e-drafts-folder . "/georgenpadron@gmail.com/[Gmail]/Drafts")
+		  (mu4e-sent-folder . "/georgenpadron@gmail.com/[Gmail]/Sent")
+		  (mu4e-refile-folder . "/georgenpadron@gmail.com/[Gmail]/All Mail")
+		  (mu4e-trash-folder . "/georgenpadron@gmail.com/[Gmail]/Trash")
+		  (mu4e-maildir-shortcuts .
+					  (("/georgenpadron@gmail.com/INBOX" . ?i)
+					   ("/georgenpadron@gmail.com/[Gmail]/Sent Mail" . ?s)
+					   ("/Georgenpadron@gmail.com/[Gmail]/Trash" . ?t)
+					   ("/georgenpadron@gmail.com/[Gmail]/Drafts" . ?d)
+					   ("/georgenpadron@gmail.com/[Gmail]/All Mail" . ?a)))
+		  (smtpmail-mail-address . "georgenpadron@gmail.com")
+		  (smtpmail-smtp-user . "georgenpadron@gmail.com")))
+
+	 ;; Wealth Account
+	 (make-mu4e-context
+	  :name "Wealth"
+	  :match-func
+	  (lambda (msg)
+	    (when msg
+	      (string-prefix-p "/wealth2005@gmail.com" (mu4e-message-field msg :maildir))))
+	  :vars '((user-mail-address . "wealth2005@gmail.com")
+		  (user-full-name . "George N Padron")
+		  (mu4e-drafts-folder . "/wealth2005@gmail.com/[Gmail]/Drafts")
+		  (mu4e-sent-folder . "/wealth2005@gmail.com/[Gmail]/Sent Mail")
+		  (mu4e-refile-folder . "/wealth2005@gmail.com/[Gmail]/All Mail")
+		  (mu4e-trash-folder . "/wealth2005@gmail.com/[Gmail]/Trash")
+		  (mu4e-maildir-shortcuts .
+					  (("/wealth2005@gmail.com/INBOX" . ?i)
+					   ("/wealth2005@gmail.com/[Gmail]/Sent Mail" . ?s)
+					   ("/wealth2005@gmail.com/[Gmail]/Trash" . ?t)
+					   ("/wealth2005@gmail.com/[Gmail]/Drafts" . ?d)
+					   ("/wealth2005@gmail.com/[Gmail]/All Mail" . ?a)))
+		  (smtpmail-mail-address . "wealth2005@gmail.com")
+		  (smtpmail-smtp-user . "wealth2005@gmail.com")))
+
+	 ;; george.n.padron@vanderbilt.edu Account
+	 (make-mu4e-context
+	  :name "Vanderbilt"
+	  :match-func
+	  (lambda (msg)
+	    (when msg
+	      (string-prefix-p "/george.n.padron@vanderbilt.edu" (mu4e-message-field msg :maildir))))
+	  :vars '((user-mail-address . "george.n.padron@vanderbilt.edu")
+		  (user-full-name . "George N Padron")
+		  (smtpmail-smtp-server . "smtp.gmail.com")
+		  (smtpmail-smtp-service . 465)
+		  (smtpmail-stream-type . ssl)
+		  (mu4e-drafts-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Drafts")
+		  (mu4e-sent-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Sent Mail")
+		  (mu4e-refile-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/All Mail")
+		  (mu4e-trash-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Trash")
+		  (mu4e-maildir-shortcuts .
+					  (("/george.n.padron@vanderbilt.edu/INBOX" . ?i)
+					   ("/george.n.padron@vanderbilt.edu/[Gmail]/Sent Mail" . ?s)
+					   ("/george.n.padron@vanderbilt.edu/[Gmail]/Trash" . ?t)
+					   ("/george.n.padron@vanderbilt.edu/[Gmail]/Drafts" . ?d)
+					   ("/george.n.padron@vanderbilt.edu/[Gmail]/All Mail" . ?a)))
+		  (smtpmail-mail-address . "george.n.padron@vanderbilt.edu")
+		  (smtpmail-smtp-user . "george.n.padron@vanderbilt.edu"))))))
 
 (setq gc-cons-threshhold (* 2 1000 1000))

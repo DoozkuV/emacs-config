@@ -1,2 +1,3 @@
 #+title: Emacs Config
-These are my personal emacs configuration files. 
+These are my personal Emacs configuration files. Do with them what you
+wish. 

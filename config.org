@@ -754,6 +754,12 @@ Github page.
     ;; (setq consult-project-function nil)
   )
 #+end_src
+* Programming
+** Lisp Editing
+#+begin_src emacs-lisp
+  (use-package evil-cleverparens
+    :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
+#+end_src
 * Projectile
 [[https://github.com/bbatsov/projectile][Projectile]] is a power package for managing projects, and in my opinion
 is superior to the default =package.el= that is built-in to
@@ -1230,7 +1236,7 @@ set a theme in there
     :config
     (load-theme 'catppuccin :no-confirm))
 #+end_src
-** Font
+** Fonts
 The default font is set here.
 #+begin_src emacs-lisp
 (set-face-attribute 'default nil :font "RobotoMono Nerd Font" :height 110)

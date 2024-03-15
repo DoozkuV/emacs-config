@@ -545,6 +545,9 @@ If the file does not exist, it will be created at the specified directory."
   ;; (setq consult-project-function nil)
 )
 
+(use-package evil-cleverparens
+  :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
+
 (use-package projectile
   :diminish projectile-mode
   :config (projectile-mode 1)

@@ -1,0 +1,1680 @@
+#+title My Emacs Configuration
+#+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
+#+STARTUP: overview
+
+* Basic Config
+** Preliminary Work
+Some basic settings here to disable some startup functionality to give Emacs a more minimalist look and feel. 
+#+begin_src emacs-lisp
+  ;; Setup to make Emacs startup significantly faster.
+  ;; This is later dialed back at the end of the config
+  (setq gc-cons-threshold (* 50 1000 1000))
+
+  (setq native-comp-async-report-warnings-errors nil)
+
+  ;; Config to make emacs more minimal in appearance
+  (setq inhibit-startup-message t)
+  (scroll-bar-mode -1) ; Disable visual scrollbar 
+  (tool-bar-mode -1) ; Disable toolbar 
+  (tooltip-mode -1) ; Disable tooltips
+  (menu-bar-mode -1) ; Disable menu-bar
+  (set-fringe-mode 10) ; Fringes on the sides
+  (setq use-dialog-box nil) ; Don't pop up UI dialogs when prompting
+  ;; Tab Bar 
+  (setq tab-bar-show 1 ; Show tab bar only when more than 1 tab present
+        tab-bar-new-button-show nil ; Disable new and close button on tab bar
+        tab-bar-close-button-show nil
+        tab-bar-auto-width nil) ; Make tab-bar width change dynamically 
+        ;; tab-bar-new-tab-choice 'dashboard-open) 
+
+  (pixel-scroll-mode) ; Nice sexy scrolling
+
+  ;; Buffer reverting 
+  (global-auto-revert-mode 1) ; Revert buffers when underlying file changes
+  (setq global-auto-revert-non-file-buffers t) ; Revert Dired and other buffers
+
+  (recentf-mode 1) ; Enable file history
+
+  ;; Set scrolling to mimic vim with some scroll margin
+  (setq scroll-margin 10
+        scroll-step 1
+        scroll-conservatively 10000
+        scroll-preserve-screen-position 1)
+  ;; Disable margin in specific buffer types
+  (dolist (mode '(shell-mode-hook
+                  compilation-mode-hook
+                  rustic-compilation-mode-hook
+                  TeX-output-mode-hook))
+    (add-hook mode (lambda () (setq-local scroll-margin 0))))
+
+  (setq user-mail-address "georgenpadron@gmail.com")
+#+end_src
+** Global Variables and Utilities
+Here are some global variables defined for use throughout this configuration.
+#+begin_src emacs-lisp
+  (defvar config-path "~/.config/emacs"
+    "The default path of all of the init.el configuration files within
+    this Emacs config. Useful when calling Emacs from an altered
+    config directory using 'init-directory'" )
+#+end_src
+
+** Line Numbers
+Set up line numbers and relative line numbers to appear in every
+buffer type, then create a special hook in order to disable the line
+numbers for specific modes (like /org/ mode, /term/ mode, /shell/ mode,
+etc.)
+#+begin_src emacs-lisp
+  (global-display-line-numbers-mode)
+  (setq display-line-numbers-type 'relative)
+  ;; Disable line numbers for some modes
+  (dolist (mode '(;; org-mode-hook
+                  term-mode-hook
+                  shell-mode-hook
+                  vterm-mode-hook
+                  eshell-mode-hook
+                  inferior-python-mode-hook
+                  helpful-mode-hook
+                  mu4e-view-mode-hook
+                  treemacs-mode-hook
+                  inferior-emacs-lisp-mode-hook
+                  doc-view-mode-hook
+                  image-minor-mode-hook
+                  pdf-tools-enabled-hook
+                  mu4e-main-mode-hook
+                  chatgpt-shell-mode-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+#+end_src
+** Electric Parenthesis
+Set up electric parenthesis (the automatic
+parenthesis/brackets/quotation marks/etc. that get generated when you
+click the other pair) to only generate in programming modes.
+
+Note that 'electric-pair-mode' is a "global minor mode", which means that setting it sets it for all buffers. If I want a buffer local version of electric pair mode, I have to use the 'electric-pair-local-mode'. 
+#+begin_src emacs-lisp
+  (dolist (mode '(prog-mode-hook
+                  latex-mode-hook
+                  conf-mode-hook
+                  eshell-mode-hook
+                  vterm-mode-hook))
+    (add-hook mode (lambda () (electric-pair-local-mode 1))))
+#+end_src
+
+** Font Configuration
+Sets up the fonts to be used in normal buffers as well as in Org Mode Buffers. It seems that for some reason, the "Cantarell" Font is not properly setup for Italicized fonts. So instead we use Noto Sans as the default font for text. The font used for headings as well as font settings for other Org-mode fonts are set later in the file in the [[Faces and Fonts]] section.
+#+begin_src emacs-lisp
+  ;; (set-face-attribute 'default nil :font "LiterationMono Nerd Font" ) ; :height 107)
+
+  ;; ;; Set the fixed pitch face
+  ;; (set-face-attribute 'fixed-pitch nil :font "LiterationMono Nerd Font")
+
+  ;; Set the variable pitch face
+  (defvar gp/variable-width-font "Noto Sans"
+    "The default font to be used in variable width text")
+  (set-face-attribute 'variable-pitch nil :font gp/variable-width-font :weight 'light :height 1.3)
+#+end_src
+
+** Custom File
+Save all of the custom-set variables in an external "custom.el" file
+#+begin_src emacs-lisp
+  (setq custom-file (concat config-path "/custom.el"))
+  (load custom-file)
+#+end_src
+
+** Backup Files
+Default Emacs behavior is to save backup files in the same directory
+with a tilde '~' appended. This is stupid and annoying. Here we
+configure Emacs to use a specific directory to save it's backups.
+
+See this [[https://www.emacswiki.org/emacs/BackupDirectory][emacswiki]] article for more information regarding this.
+#+begin_src emacs-lisp
+  (setq
+     backup-by-copying t     ; don't fuck-up symlinks
+     backup-directory-alist
+     '(("." . "~/.emacs-backups")) ;don't litter my filesystem
+     delete-old-versions t
+     kept-new-versions 6
+     kept-old-versions 2
+     version-control t)      ; use versioned backups
+#+end_src
+
+** Project.el Config
+Project.el is an in-built Emacs package that stores and allows convenient actions on packages.
+#+begin_src emacs-lisp
+  (defvar gp/project-file-definer ".projectile"
+    "The name of the file that will be used by project.el to mark projects without a VCS setup.")
+
+  (setq project-vc-extra-root-markers `(,gp/project-file-definer "*.iml" "Cargo.toml"))
+#+end_src
+
+This function allows us to quickly create .projectile files 
+#+begin_src emacs-lisp
+  (defun gp/make-projectile-file (directory)
+    "Assuming 'directory' is a valid directory, creates a file with the name defined by 'gp/project-file-definer' in 'directory'. Throws an error if directory is not valid. If directory is an empty string, chooses the current directory of the buffer."
+    (interactive "DChoose Directory: ")
+    (if (not (f-directory? directory))
+        (error "Invalid directory entered")
+      (f-touch (concat directory gp/project-file-definer))))
+
+#+end_src
+* Package Setup
+** Basic Setup
+Here we set up the repositories that the Emacs Package manger will pull from 
+#+begin_src emacs-lisp
+(require 'package)
+
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+	("org" . "https://orgmode.org/elpa/")
+	("elpa" . "https://elpa.gnu.org/packages/")))
+#+end_src
+Then, we set up the "use-package" package so that we can use it to configure the packages for the rest of our init file
+#+begin_src emacs-lisp
+(package-initialize)
+
+(setq use-package-always-ensure t)
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+(eval-when-compile (require 'use-package))
+#+end_src
+** Auto-Package
+This package allows packages to be automatically updated at user-defined intervals. See [[https://www.youtube.com/watch?v=dtjq68F2dXw&list=PLEoMzSkcN8oPH1au7H6B7bBJ4ZO7BXjSZ&index=11][System Crafter's Video]] on keeping packages up to date.
+#+begin_src emacs-lisp
+  (use-package auto-package-update
+    :custom
+    (auto-package-update-interval 7)
+    (auto-package-update-prompt-before-update t)
+    (auto-package-update-hide-results nil)
+    :config
+    (auto-package-update-maybe)
+    (auto-package-update-at-time "20:00"))
+#+end_src
+* Key-bindings 
+** General
+'General' is a useful package for defining keybinds and multi-part
+keybinds. In this case, the package is used extensively in order to
+mange the <leader> key setup. In my config, <leader> is bound to the
+SPC key.
+#+begin_src emacs-lisp
+  (use-package general
+    :config
+    ;; The definer for the keybindings
+    ;; C-SPC is used in buffers where the default space key is already bound
+    (general-create-definer gp/leader-keys
+      :states '(normal insert visual emacs)
+      :keymaps 'override
+      :prefix "SPC"
+      :non-normal-prefix "C-SPC")
+
+    (general-create-definer gp/local-leader-keys
+      :states '(normal insert visual emacs)
+      :prefix "SPC m"
+      :non-normal-prefix "C-SPC m")
+
+    (gp/leader-keys
+      ;; Toggles
+      "t" '(:ignore t :which-key "toggles")
+      "tt" '(consult-theme :which-key "Choose Theme")
+      "tc" '(corfu-mode :which-key "Toggle corfu")
+      "tp" '(electric-pair-mode :which-key "Toggle electric pairs")
+      "to" '(gp/opacity-mode :which-key "Toggle opacity")
+      "tf" '(flyspell-mode :which-key "Toggle flyspell mode")
+      "tF" '(flyspell-prog-mode :which-key "Toggle flyspell prog mode")
+      "." '(find-file :which-key "Find Files")
+
+      ;; Window Management
+      "w" '(evil-window-map :which-key "window")
+      "`" '(evil-switch-to-windows-last-buffer
+            :which-key "Switch To Last Buffer")
+
+      ;; Buffer management
+      "," '(consult-buffer :which-key "Switch Buffer")
+      "b" '(:ignore t :which-key "buffer")
+      ;;; Consult buffer
+      "bb" '(consult-buffer :which-key "Kill Current Buffer")
+      "bk" '(kill-current-buffer :which-key "Kill Current Buffer")
+      "bK" '(kill-all-buffers :which-key "Kill Buffer List")
+      "bc" '(clone-buffer :which-key "Clone Buffer")
+      "bx" '(scratch-buffer :which-key "Scratch Buffer")
+      "bi" '(ibuffer :which-key "Ibuffer")
+      "bs" '(switch-to-buffer :which-key "Switch Buffer")
+      "bl" '(list-buffers :which-key "List Buffers")
+      "br" '(revert-buffer :which-key "Revert Buffers")
+
+      ;; Project management
+      ;; NOTE: For some reason I can't get the 'project-prefix-map' to work properly
+      ;; with this keybinding, so instead this simulate key is used instead. 
+      "p" (general-simulate-key "C-x p" :which-key "project")
+      "SPC" '(project-find-file :which-key "Find Project Files")
+      "C-SPC" '(project-find-file :which-key "Find Project Files")
+
+      ;; Open utilities
+      "o" '(:ignore t :which-key "open")
+      "oe" '(eshell :which-key "Open Eshell")
+      "oc" '(org-capture :which-key "Open Org Capture")
+      "x" '(scratch-buffer :which-key "Open Org Capture")
+      "X" '(org-capture :which-key "Open Org Capture")
+      "oC" '(calc :which-key "Open Calculator")
+      "oa" '(org-agenda :which-key "Open Org Agenda")
+      "ot" '(vterm :which-key "Open Terminal")
+      "oi" '(ielm :which-key "Open Ielm")
+      "or" '(gts-do-translate :which-key "Open Translator")
+      "oe" '(eshell :which-key "Open Eshell")
+      "op" '(treemacs :which-key "Open File-Tree")
+      "om" '(mu4e :which-key "Open Mail")
+      "j" '((lambda () (interactive) (org-capture nil "jj")) :which-key "Capture Journal")
+      "c" '((lambda () (interactive)
+              (find-file (concat config-path "/config.org")))
+            :which-key "Open Config")
+
+      ;; Help
+      "h" '(help-command :which-key "help")
+
+      ;; Evaluate Lisp
+      "e" '(:ignore t :which-key "evaluate")
+      "es" '(eval-last-sexp :which-key "Eval Last Sexp")
+      "er" '(eval-region :which-key "Eval Region")
+      "ef" '(eval-defun :which-key "Eval Full Expression")
+      "eb" '(eval-buffer :which-key "Eval Buffer")
+      "ee" '(eval-expression :which-key "Eval Expression")
+      "ew" '(count-words :which-key "Eval Word-Count")
+      ":" '(eval-expression :which-key "Eval Expression")
+
+      ;; Recent Files
+      "f" '(consult-recent-file :which-key "Open Recent Files")
+      "F" '(recentf-open-files :which-key "Open Recent Files Buffer")
+
+      ;; Quit
+      "q" '(:ignore t :which-key "quit")
+      "qr" '(restart-emacs :which-key "Restart Emacs")
+      "qq" '(kill-emacs :which-key "Kill Emacs")
+
+      ;; Search
+      "s" '(consult-ripgrep :which-key "Grep Search")
+
+      ;; Other
+      "u" '(universal-argument :which-key "Universal Argument")
+      "C-r" '(restart-emacs :which-key "Restart Emacs")
+      "C-u" '(yay-update :which-key "Arch Update")
+      "/" '(consult-line :which-key "Search In Project"))
+    ;; Define Project.el keymap bindings
+    (keymap-set project-prefix-map "m" 'gp/make-projectile-file))
+    #+end_src
+
+** Evil
+*** Look-Up Function
+A specialized function that sets up the function called by 'evil-lookup-func' depending on the buffer type. 
+#+begin_src emacs-lisp
+  ;;; Set up variables for the function
+  (defvar gp/evil-lookup-modes-list
+    '((lsp-mode-hook . lsp-describe-thing-at-point)
+      (sh-mode-hook . gp/man-at-point)
+      (org-mode-hook . gp/dict-at-point))
+    "A list containing mode hooks and corresponding functions to be
+    called by 'evil-lookup-func' within those modes.")
+
+  (defvar gp/evil-lookup-func-default 'helpful-at-point
+    "The default function to be called by 'evil-lookup-func'")
+
+  (defun gp/setup-evil-lookup-modes ()
+    "Sets up the evil lookup mode hooks" 
+    (setq evil-lookup-func gp/evil-lookup-func-default)
+    (dolist (modes gp/evil-lookup-modes-list)
+      (add-hook (car modes) `(lambda ()
+                               (unless (string-equal (buffer-file-name)
+                                                  (expand-file-name (concat config-path "/config.org")))
+                              (setq-local evil-lookup-func ',(cdr modes)))))))
+#+end_src
+
+*** Basic Setup
+Evil is Emacs's Vim Emulation mode. Here I have evil set up with some custom defaults like "C-u" to go up or "C-e" to go to the end of the line. 
+#+begin_src emacs-lisp
+
+  (use-package evil
+    :demand t ;; Prevent lazy loading 
+    :bind (("<escape>" . keyboard-escape-quit)
+           :map minibuffer-mode-map
+           ("C-g" . keyboard-escape-quit))
+    :init
+    (setq evil-want-integration t)
+    (setq evil-want-keybinding nil)
+    (setq evil-want-C-u-scroll t)
+    (setq evil-want-C-i-jump nil)
+    (setq evil-undo-system 'undo-redo)
+    (setq evil-auto-indent t)
+
+    :config
+    ;; Set-up auto-lookup function
+    (gp/setup-evil-lookup-modes)
+
+    (evil-mode 1)
+    (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+    (define-key evil-insert-state-map (kbd "C-e") 'end-of-line)
+    (define-key evil-insert-state-map (kbd "C-<return>") '(lambda () (interactive)
+                                                            (end-of-line)
+                                                            (newline)))
+    ;; Some keybinds to make navigation in insert mode easier
+    ;; (define-key evil-insert-state-map (kbd "C-j") 'next-line)
+    ;; (define-key evil-insert-state-map (kbd "C-k") 'previous-line)
+    ;; (define-key evil-insert-state-map (kbd "C-h") 'left-char)
+    ;; (define-key evil-insert-state-map (kbd "C-l") 'right-char)
+
+    ;; Rebind C-d and C-u to the new functions
+    (general-define-key
+     :states 'normal
+     "C-u" 'gp/scroll-up-and-recenter
+     "C-d" 'gp/scroll-down-and-recenter)
+
+    ;; Rebind j and k to make them go up and down through wrapped lines
+    ;; (general-define-key
+    ;;  :states 'normal
+    ;;  "j" 'evil-next-visual-line
+    ;;  "k" 'evil-previous-visual-line)
+
+
+    (evil-set-initial-state 'message-buffer-mode 'insert)
+    (evil-set-initial-state 'dashboard-mode 'normal))
+
+#+end_src
+The package evil collection has some extra evil configuration for other modes within Emacs. Essentially, this allows me to use Evil everywhere.
+#+begin_src emacs-lisp
+  ;;; General evil configuration
+  (use-package evil-collection
+    :after evil
+    :custom
+    (evil-collection-want-unimpaired-p t)
+    (evil-collection-setup-minibuffer t)
+    :config
+    (evil-collection-init))
+
+  ;;; Evil configuration for use in org-mode buffers
+  (use-package evil-org
+    :after org
+    :hook (org-mode . (lambda () evil-org-mode))
+    :config
+    (require 'evil-org-agenda)
+    (evil-org-agenda-set-keys))
+
+  #+end_src
+  These simple functions are essentially the equivalent of adding 'zz' after 'C-d' or 'C-u' in Vim.
+  #+begin_src emacs-lisp
+    (defun gp/scroll-down-and-recenter ()
+      "Scroll the window down and recenter it at the cursor"
+      (interactive)
+      (evil-scroll-down 0)
+      (recenter))
+
+    (defun gp/scroll-up-and-recenter ()
+      "Scroll the window up and recenter it at the cursor"
+      (interactive)
+      (evil-scroll-up 0)
+      (recenter))
+#+end_src
+
+*** Highlight on Yank
+This package sets up some nice and simple highlighting around certain evil actions. 
+#+begin_src emacs-lisp
+  ;; (use-package evil-goggles
+  ;;   :diminish t
+  ;;   :config
+  ;;   (evil-goggles-mode)
+  ;;   ;; enables a unique face for when text is deleted
+  ;;   (evil-goggles-use-diff-faces))
+#+end_src
+*** Hydra
+The Hydra package allows me to create special keybinds that can be linked together like a hydra. The following sets up an example where a command is made that allows one to easily scale up or down font size.
+#+begin_src emacs-lisp
+(use-package hydra)
+
+(defhydra hydra-text-scale (:timeout 4)
+	  "scale text"
+	  ("j" text-scale-decrease "out")
+	  ("k" text-scale-increase "in")
+	  ("q" nil "finished" :exit t))
+
+(gp/leader-keys
+  "ts" '(hydra-text-scale/body :which-key "scale text"))
+
+#+end_src
+*** Evil-snipe
+This package allows one to use the <S> key in order to snipe ahead. Essentially, it acts like the <F> key except with two characters. There is also some configuration regarding the "scope" of the search. I have the scope set so on the initial keypress it should only search on the line in front, but for repeating key-presses it marks the entirety of the visible buffer.
+#+begin_src emacs-lisp
+(use-package evil-snipe
+  :diminish
+  :after evil
+  :config
+  (evil-snipe-mode 1)
+  (evil-snipe-override-mode 1)
+  ; Set the scope of searches and repeated searches
+  (setq evil-snipe-scope 'line)
+  (setq evil-snipe-repeat-scope 'visible)
+  (setq evil-snipe-spillover-scope 'whole-visible))
+
+#+end_src
+*** Evil-Surround
+This [[https://github.com/emacs-evil/evil-surround][package]] allows one to surround a text selection 
+#+begin_src emacs-lisp
+  (use-package evil-surround
+    :after evil
+    :ensure t
+    :config
+    (global-evil-surround-mode 1))
+#+end_src
+*** Multi-Edit
+Multi-edit mode allows me to edit multiple lines with ease. See more about this mode [[https://github/com/hlissner/evil-multiedit][here]].
+#+begin_src emacs-lisp
+(use-package evil-multiedit
+    :after evil
+    :config
+    (evil-multiedit-default-keybinds))
+#+end_src
+The second line there sets up dome default keybinds for evil-multiedit. The keybinds are as follows...
+- R: Highlights all matches of the selection in the buffer
+- M-d: Matches the word under the cursor - consecutive presses will continually match
+- M-D: Same as M-d but in reverse.
+  
+** Avy
+Avy is a useful utiliy that allows one to jump around different parts of a buffer with ease. Read more about avy and it's different commands [[https://github.com/abo-abo/avy][here]]. 
+#+begin_src emacs-lisp
+  (use-package avy
+    :init
+    (setq avy-timeout-seconds 0.35)
+    :config 
+     ;; Set general keybinds
+    (general-define-key
+     :states ''motion
+     "g s" 'avy-goto-char-timer)
+    (general-define-key
+     :states ''motion
+     :keymaps 'org-mode-map
+     :major-modes 'org-mode
+     "g h" 'avy-org-goto-heading-timer)
+    )
+
+#+end_src
+
+As listed in the github page, there are many more commands that could potentially be set, such as a command for jumping to different /Org-mode/ headings. However, this default configuration is good for now. 
+
+** Which Key
+A useful package which shows helpful pop-ups on when keybinds are press. In this case, I have the package configured so that the delay between a keypress and the UI appearing is just 0.3 seconds.
+#+begin_src emacs-lisp
+  (use-package which-key
+    :init (which-key-mode)
+    :diminish which-key-mode
+    :custom
+    (which-key-sort-order 'which-key-prefix-then-key-order-reverse)
+    :config
+    (setq which-key-idle-delay 0.25))
+#+end_src
+* Auto-completion
+** Vertico
+Vertico is a powerful auto-completion bar that shows up in many common commands like searching through files, buffers, commands, and more. Here I have it set up with some custom Vim-like binds to make scrolling up and down easier.
+#+begin_src emacs-lisp
+(use-package vertico
+  :diminish
+  :bind (:map vertico-map ; Neat vimlike binds
+	      ("C-j" . vertico-next)  
+	      ("C-k" . vertico-previous)
+	      ("C-f" . vertico-exit)
+	      :map minibuffer-local-map
+	      ("M-h" . backward-kill-word))
+  :custom
+  (vertico-cycle t)
+  :init
+  (vertico-mode))
+#+end_src
+
+The following package saves the history of vertico calls between Emacs sessions
+#+begin_src emacs-lisp
+(use-package savehist
+  :init
+  (savehist-mode))
+#+end_src
+
+** Marginalia
+This package provides extra info in completion buffers, like documentation info for commands.
+#+begin_src emacs-lisp
+(use-package marginalia
+  :after vertico
+  :custom
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :init
+  (marginalia-mode))
+#+end_src
+
+** Orderless Fuzzy Finding
+This package provides Vertico powerful orderless fuzzy-finding functionality. Simply press space while typing a command to create a new fuzzy-find search
+#+begin_src emacs-lisp
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+#+end_src
+
+** Corfu
+A more minimalist completion engine like Vertico
+#+begin_src emacs-lisp
+  ;; Function to define corfu's functionality in shells and shell buffers
+  (defun corfu-shell-functionality () (setq-local corfu-quit-at-boundry t
+                                                 corfu-quit-no-match t
+                                                 corfu-auto nil)
+         (corfu-mode))
+
+  (use-package corfu
+    :custom
+    (corfu-cycle t) ; Allows cycling through candidates
+    (corfu-auto t)  ; Enables auto-completion
+    (corfu-auto-prefix 1) ; Type one key for corfu to pop-up
+    (corfu-auto-delay 0.0) ; Delay between typing and the completion window appearing
+    (corfu-quit-at-boundry 'separator)
+    (corfu-echo-documentation 0.25)
+    (corfu-preview-current 'insert) ; Do not preview current candidate
+    (corfu-preselct-first nil)
+    :bind (:map corfu-map
+                ("M-SPC" . corfu-insert-separator)
+                ("<tab>" . corfu-next)
+                ("<backtab>" . corfu-previous))
+    :init
+    ;; Use corfu everywhere
+    (global-corfu-mode)
+    ;; Save completion history for better sorting
+    (corfu-history-mode)
+    :config
+    (add-hook 'eshell-mode-hook
+              (lambda () (setq-local corfu-quit-at-boundry t
+                                     corfu-quit-no-match t
+                                     corfu-auto nil)
+                (corfu-mode)))
+    ;; Hook the functionality onto the shell buffers   
+    (add-hook 'eshell-mode-hook 'corfu-shell-functionality)
+    (add-hook 'shell-mode-hook 'corfu-shell-functionality)
+    )
+
+#+end_src
+
+** Consult
+Consult is an incredibly useful program for searching and completeing in Emacs. The github page is found [[https://github.com/minad/consult][here]].
+#+begin_src emacs-lisp
+  (use-package consult)
+
+  ;; Consult for flyspell 
+  (use-package consult-flyspell)
+#+end_src
+
+* Dired and File Management
+** Dirvish/Dired
+[[https://github.com/alexluigit/dirvish][Dirvish]] is an interesting package that promises an enhanced experience over Dired, including options for a ranger-style file browser or a more traditional dired file browser
+#+begin_src emacs-lisp
+  (use-package dirvish
+    :general
+    (gp/leader-keys
+      "d" '(dirvish-dwim :which-key "Dired")) 
+    (general-define-key
+     :states 'normal
+     :keymaps 'dirvish-mode-map
+     "H" 'dired-hide-dotfiles-mode ; See dired-hide-dotfiles
+     "z" 'zoxide-travel  
+     "q" 'dirvish-quit
+     "h" 'dired-up-directory
+     "l" 'dired-find-file)
+    :custom
+    ;; Sets the attributes that are shown on each file 
+    (dirvish-attributes '(file-size file-time all-the-icons vc-state))
+    :init (dirvish-override-dired-mode))
+#+end_src
+
+In order to provide hiding dotfiles functionality, we use a package called "dired-hide-dotfiles" That does exactly what it implies.
+#+begin_src emacs-lisp
+  (use-package dired-hide-dotfiles
+    :hook (dired-mode . dired-hide-dotfiles-mode))
+#+end_src
+** Zoxide Integration
+[[https://gitlab.com/Vonfry/zoxide.el][Zoxide.el]] is a package that provides a thin wrapper for the smarter cd command /Zoxide/. 
+#+begin_src emacs-lisp
+  (use-package zoxide
+    :commands
+    (zoxide-find-file zoxide-find-file-with-query zoxide-travel zoxide-travel-with-query
+                      zoxide-cd zoxide-cd-with-query zoxide-add zoxide-remove zoxide-query
+                      zoxide-query-with zoxide-open-with)
+    :general
+    (gp/leader-keys
+      "z" '(zoxide-find-file :which-key "Zoxide Find File")
+      "Z" '(zoxide-travel :which-key "Zoxide Travel"))
+    :config
+    (add-hook 'find-file-hook 'zoxide-add))
+#+end_src
+* Window Management
+** Popper
+Popper is a package that controls pop-up buffers and manages them in a small, easy to use fashion
+It is recommended to be used alongside a window manager program like [[https://depp.brause.cc/shackle/][shackle]], although for right now it is just set by itself. I will add and configure shackle if Popper alone becomes too much of a pain.
+
+With this configuration, any buffer appended with the '-popup' text will be matched as a popup buffer.
+#+begin_src emacs-lisp
+  (use-package popper
+    :bind (("C-`"   . popper-toggle)
+           ("M-`"   . popper-cycle)
+           ("C-~" . popper-toggle-type)) ; Equivalent to C-S-`
+    :init
+    (setq popper-reference-buffers
+          ;; Buffers to become pop-ups
+          '("\\*Messages\\*"
+            "Output\\*$"
+            "\\*scratch\\*"
+            "\\*Async Shell Command\\*"
+            "\\*package update results\\*"
+            ("\\*Warnings\\*" . hide)
+            "\*godot - .+\*" ;; All godot related buffers
+            "\*cargo-.+\*" ;; All cargo related buffers
+            "\*rustfmt\*" ;; All cargo related buffers
+            "\*Go-translate\*" 
+            ;; SHELL POPUP BUFFERS
+            "^\\*eshell.*\\*$" eshell-mode ;eshell as a popup
+            "^\\*shell.*\\*$"  shell-mode  ;shell as a popup
+            "^\\*term.*\\*$"   term-mode   ;term as a popup
+            "^\\*vterm.*\\*$"  vterm-mode  ;vterm as a popup
+            "\\*ielm\\*"
+            Man-mode
+            help-mode
+            helpful-mode
+            lsp-help-mode
+            compilation-mode
+            inferior-python-mode
+            rustic-compilation-mode
+            "\\*.+-popup*\\*")) ;; All buffers with -popup appended to them
+
+
+    (setq popper-window-height 20)
+    ;; Groups by project.el, with fall back to default-directory
+    (setq popper-group-function #'popper-group-by-directory)
+    ;; Allows shackle to handle popup management
+    ;; (setq popper-display-control nil)
+    (popper-mode +1)
+    (popper-echo-mode +1))                ; For echo area hints
+#+end_src
+
+** Shackle
+Shackle is a projecte designed to handle how windows are opened within Emacs. It is used in conjunction with [[Popper]] in order to have a clean and easy setup for controlling popup windows.
+
+Note that currently because of the wonky way of how Eshell works, Shackle is not able to control it and the other term modes upon the immediate opening of them. Therefore, we have to make additional configuration in order to make these terminals play nice. For now, see [[https://newsa.gent/posts/taming-eshell-with-shackle-el-popper--el-patch/][this article]] for more information regarding this topic.
+
+Note, this package is currently *DISABLED* in this config
+#+begin_src emacs-lisp :tangle no
+  (use-package shackle
+    :config
+    (shackle-mode 1)
+    :custom
+    (shackle-rules
+     '(((eshell-mode vterm-mode shell-mode term-mode inferior-python-mode) 
+        :select t
+        :align 'below
+        :size 0.30)
+       ((compilation-mode rustic-compilation-mode TeX-output-mode)
+        :select nil
+        :align 'below
+        :size 0.25)
+       (("\*cargo-.+\*" "\*rustfmt\*" "\*godot - .+\*"
+         "\*Warnings\*")
+        :regexp t
+        :select nil
+        :align 'below
+        :size 0.25)
+       ("*Go-Translate*" 
+        :select nil
+        :align 'below
+        :size 0.35)
+       ((help-mode helpful-mode lsp-help-mode Man-mode) 
+        :select t
+        :align 'above
+        :size 0.35)
+       ("*scratch*"
+        :select t
+        :popup t
+        :align 'below
+        :size 0.25))))
+
+
+#+end_src
+* Git and Magit
+Magit is a very useful program for managing git repos. Luckily, there is not much to set up here!
+#+begin_src emacs-lisp
+  (use-package magit
+    :general ; Setup binds
+    (gp/leader-keys
+    "g" '(:ignore t :which-key "git")
+    "gs" '(magit-status :which-key "git status")
+    "gg" '(magit :which-key "git open")
+    ))
+#+end_src
+* Dashboard
+
+The [[https://github.com/emacs-dashboard/emacs-dashboard][Dashboard]] package creates a neat dashboard upon opening Emacs
+#+begin_src emacs-lisp :tangle no
+  ;; Nice line breaks for dashboard
+  (use-package page-break-lines)
+
+  (use-package dashboard
+    ;; :after all-the-icons
+    :hook (dashboard-mode . page-break-lines-mode)
+    :init
+    ;; (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
+    (setq initial-buffer-choice (lambda () (dashboard-open)))
+    ;; Setup what appears on the dashboard
+    (setq dashboard-items '((projects . 10)
+                            (recents . 10)
+                            (agenda . 5)
+                            ))
+    ;; Set up widget icons upon startup
+    (setq dashboard-icon-type 'nerd-icons
+          dashboard-set-heading-icons t
+          dashboard-projects-backend 'project-el
+          dashboard-set-file-icons t)
+    :config
+    ;; Display an alternative emacs logo upon startup
+    (setq dashboard-startup-banner 'logo)
+    ;; Center content
+    (setq dashboard-center-content nil)
+
+    ;; Show package loadup time
+    (setq dashboard-set-init-info t)
+    ;; Show the footnote
+    (setq dashboard-set-footer t)
+    (setq dashboard-page-separator "\n\n")
+    (dashboard-setup-startup-hook))
+#+end_src
+
+* Theming
+** Doom Themes
+Alternate theme pack from Doom Emacs that includes several themes, including the 'Gruvbox' theme that will be used on this laptop
+
+#+begin_src emacs-lisp 
+  (use-package doom-themes
+    :config
+    (setq doom-themes-enable-bold t
+          doom-themes-enable-italic t)
+    (load-theme 'doom-gruvbox t)
+    ;; Set the visual bell
+    (doom-themes-visual-bell-config)
+    (doom-themes-org-config)
+    )
+#+end_src
+** Icons
+Set up icons 
+#+begin_src emacs-lisp
+  (use-package all-the-icons
+    :if (display-graphic-p))
+#+end_src
+** Background Opacity 
+Below is a custom function called =gp/opacity-mode= that allows me to toggle on and off transparency on demand. The variable =gp/background-opacity= is used to set exactly how opaque the background should be. 
+#+begin_src emacs-lisp
+  (defvar gp/background-opacity 75
+    "The default opacity of the background when the transparency
+  mode is toggled on."
+    )
+
+  ;;;###autoload
+  (define-minor-mode gp/opacity-mode
+    "Enables background frame opacity"
+    :lighter " op"
+    :global t
+    (if gp/opacity-mode
+        ;; Turn on opacity by setting the alpha value of the current
+        ;; and all future frames
+        (progn
+          (set-frame-parameter nil 'alpha-background gp/background-opacity)
+          (add-to-list 'default-frame-alist `(alpha-background . ,gp/background-opacity))
+          )
+      ;; Turn off the opacity otherwise 
+      (set-frame-parameter nil 'alpha-background 100)
+      (assq-delete-all 'alpha-background default-frame-alist)))
+
+  (provide 'gp/opacity-mode)
+  ;; Automatically enable transparency at launch
+  (gp/opacity-mode)
+#+end_src
+** Rainbow Delimiters
+Set rainbow delimiters for paranthesis, brackets, etc when in a programming mode
+#+begin_src emacs-lisp
+(use-package rainbow-delimiters
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+#+end_src
+** Modeline
+For this config, we use the package "Doom-modeline" to create a nice and sexy modeline. I tried the "smart" modeline initially, but honestly for right now I prefer the doom modeline. It just looks much more nice, clean, and modern than the other line...
+#+begin_src emacs-lisp :tangle no 
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1))
+#+end_src
+* Org mode
+Org mode is an extremely useful feature for note-taking, journaling, managing notes, and more!
+** Initial Setup
+Here is some basic config setup for Org mode:
+#+begin_src emacs-lisp
+
+  (defun gp/org-mode-setup ()
+    (org-indent-mode)
+    (auto-fill-mode 0)
+    (visual-line-mode 1)
+    ) 
+
+  ;; Function 
+  (defun gp/org-toggle-emphasis-markers ()
+    "Toggles the 'org-hide-emphasis-markers' variable, effectively toggling whether or not to hide emphasis markers inside of org mode"
+    (interactive)
+    (message "org-hide-emphasis-markers=%s"
+             (setq org-hide-emphasis-markers (not org-hide-emphasis-markers))))
+
+  (use-package org
+    :hook (org-mode . gp/org-mode-setup)
+    :general
+    ;; Keybind for opening links
+    (general-define-key
+     :states 'normal
+     :keymaps 'org-mode-map
+     :major-modes 'org-mode
+     "RET" 'org-open-at-point)
+
+    ;; Local leader bindings
+    (gp/local-leader-keys
+      :keymaps 'org-mode-map
+      "d" '(org-deadline :which-key "Insert Deadline")
+      "b" '(org-babel-tangle :which-key "Babel Tangle")
+      "i" '(org-insert-link :which-key "Insert Link")
+      "y" '(org-store-link :which-key "Store Link")
+      "q" '(org-set-tags-command :which-key "Set Tags")
+      "e" '(org-export-dispatch :which-key "Export")
+      "h" '(gp/org-toggle-emphasis-markers :which-key "Toggle Emphasis Markers")
+      "x" '(org-toggle-checkbox :which-key "Toggle Emphasis Markers")
+      )
+
+    :config
+    ;; Make it so org mode always starts folded
+    (setq org-startup-folded t)
+    ;; Change how org folds display when minimized
+    (setq org-ellipsis " ▾"
+          org-hide-emphasis-markers t)
+
+    ;; Basic org agenda setup
+    (setq org-agenda-start-with-log-mode t)
+    (setq org-log-done 'time)
+    (setq org-log-into-drawer t)
+
+    ;; Where org mode looks for agenda files 
+    (setq org-agenda-files
+          '("~/Documents/org"))
+    (advice-add 'org-refile :after 'org-save-all-org-buffers)
+
+    ;; Custom org links are set here 
+    (setq org-link-abbrev-alist
+          '(("spellwiki" . "http://dnd5e.wikidot.com/spell:")))
+
+    ;; Custom todo keywords 
+    (setq org-todo-keywords
+          '((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d!)")))
+    (setq org-refile-targets
+          '(("archive.org" :maxlevel . 1)
+            ("tasks.org" :maxlevel . 1)))
+
+    ;; Template for org capture
+    (setq org-capture-templates
+          `(("t" "Tasks / Projects")
+            ("tt" "Task" entry (file+olp "~/Documents/org/tasks.org" "Inbox")
+             "* TODO %?\n %U\n %a\n %i" :empty-lines 1)
+            ("j" "Journal Entries")
+            ("jj" "Journal" entry
+             (file+olp+datetree "~/Documents/org/journal.org")
+             "* %<%I:%M %p> - Journal :journal:\n\n%?\n"
+             :clock-in :clock-resume
+             :empty-lines 1)
+            ))
+
+
+    ;; Set the clock for when org-clock times out
+    (setq org-clock-sound (concat config-path "/doorbell.mp3"))
+    :custom
+    ;; Add overline to the list of possible org emphasis markers. 
+    (org-emphasis-alist
+     (quote
+      (("*" bold)
+       ("/" italic)
+       ("_" underline)
+       ("=" org-verbatim verbatim)
+       ("~" org-code verbatim)
+       ("+"
+        (:strike-through t))
+       ("!"
+        (:overline t)
+        verbatim)))))
+
+
+#+end_src
+
+Here is an additional package called 'Org Bullets' that adds the cute little bullet points we see on the headings!
+
+#+begin_src emacs-lisp
+(use-package org-bullets
+  :after org
+  :hook (org-mode . org-bullets-mode)
+  ;; :custom
+  ;; (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●"))
+  )
+#+end_src
+
+Here we do some themeing of different faces within org, like headers, code-blocks, etc. 
+#+begin_src emacs-lisp :tangle no
+  ;; Make sure to only run this after 'org faces' has loaded. Otherwise we may run into problems
+  (with-eval-after-load 'org-faces
+    (progn
+  ;; Resize Org Headings
+      (dolist (face '((org-level-1 .  1.2)
+                      (org-level-2 . 1.1)
+                      (org-level-3 . 1.05)
+                      (org-level-4 . 1.0)
+                      (org-level-5 . 1.1)
+                      (org-level-6 . 1.1)
+                      (org-level-7 . 1.1)
+                      (org-level-8 . 1.1)))
+        (set-face-attribute (car face) nil :font gp/variable-width-font
+                            :weight 'medium :height (cdr face)))
+
+      ;; Make the document title a bit bigger
+      (set-face-attribute 'org-document-title nil :font gp/variable-width-font :weight 'bold :height 1.3)
+
+      ;; Make sure certain org faces use the fixed pitch face when variable pitch mode is on
+      (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+      (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+      (set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
+      (set-face-attribute 'org-code nil :inherit '(shadow fixed-pitch))
+      (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+      (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+      (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+      (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)))
+
+#+end_src
+
+** Babel
+Babel is the package that allows the code-blocks that are useable and callable from within Emacs buffers.
+*** Language Configuration
+here is some basic config that sets up the languages to be used by Babel. 
+#+begin_src emacs-lisp
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((emacs-lisp . t)
+       (python . t)
+       (rust . t)
+       ))
+
+  (push '("conf-unix" . conf-unix) org-src-lang-modes)
+#+end_src
+The last block there sets up Babel to work well with .conf files, like our Hyprland config file
+*** Templates
+The package org-tempo allows us to create custom babel templates for different codeblock types.
+#+begin_src emacs-lisp
+(require 'org-tempo)
+#+end_src
+
+In order to create templates, we must list what the shortcut key combination will be as well as the type that will be set-up by the code-block. In this case, if we wanted to create an Emacs-lisp codeblock, we would type out  *<el* and then hit tab.
+
+#+begin_src emacs-lisp
+(add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+(add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+(add-to-list 'org-structure-template-alist '("py" . "src python"))
+(add-to-list 'org-structure-template-alist '("rs" . "src rust"))
+(add-to-list 'org-structure-template-alist '("gd" . "src gdscript"))
+#+end_src
+
+*** Auto-tangle Configuration File
+The following code block automatically tangles this config.org file every time it is saved. That way, you don't have to run "org-babel-tangle" every single time you want to change the config! 
+#+begin_src emacs-lisp
+  (defun gp/org-babel-tangle-config()
+    (when (string-equal (buffer-file-name)
+                        (expand-file-name (concat config-path "/config.org")))
+      ;; Dynamic Scoping
+      (let ((org-confirm-babel-evaluate nil))
+        (org-babel-tangle))))
+
+    (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'gp/org-babel-tangle-config)))
+#+end_src
+
+** Org-Roam
+[[id:60048b23-b4ec-453a-bf7e-45c7ed1b6ba5][Org Roam]] is a powerful tool for creating, organizing, and linking together notes. It is comparable to Obsidian's knowledge bank functionality. 
+#+begin_src emacs-lisp
+  (use-package org-roam
+    :after org
+    :commands (org-roam-node-insert org-roam-node-find org-roam-capture)
+    :config
+    (setq org-roam-directory (file-truename "~/Documents/org/roam"))
+    (org-roam-db-autosync-mode))
+#+end_src
+
+In order to enable more easy searching and interacting with org roam, integrate the [[Consult]] package to allow easy searching through the database. Here much of the config is copied straight from the [[https://github.com/jgru/consult-org-roam][Github]] page. 
+#+begin_src emacs-lisp
+  (use-package consult-org-roam
+     :after org-roam
+     :init
+     (require 'consult-org-roam)
+     ;; Activate the minor mode
+     (consult-org-roam-mode 1)
+     :custom
+     ;; Use `ripgrep' for searching with `consult-org-roam-search'
+     (consult-org-roam-grep-func #'consult-ripgrep)
+     ;; Configure a custom narrow key for `consult-buffer'
+     (consult-org-roam-buffer-narrow-key ?r)
+     ;; Display org-roam buffers right after non-org-roam buffers
+     ;; in consult-buffer (and not down at the bottom)
+     (consult-org-roam-buffer-after-buffers t))
+     ;; :config
+     ;; Eventually suppress previewing for certain functions
+     ;; (consult-customize
+     ;;  consult-org-roam-forward-links
+     ;;  :preview-key (kbd "M-."))
+#+end_src
+
+Here are the keybinds for org-roam mode.
+#+begin_src emacs-lisp
+  (gp/leader-keys
+    "r" '(:ignore t :which-key "roam")
+    "ri" '(org-roam-node-insert :which-key "Node Insert")
+    "rc" '(org-roam-capture :which-key "Node Capture")
+
+    "rf" '(consult-org-roam-file-find :which-key "Node Find")
+
+    "rl" '(consult-org-roam-backlinks :which-key "Find Roam Backlinks")
+    "rL" '(consult-org-roam-forward-links :which-key "Find Roam Forward Links")
+
+    "rs" '(consult-org-roam-search :which-key "Search in Roam")
+    "rb" '(consult-org-roam-buffer :which-key "Search Roam Buffers")
+    )
+#+end_src
+
+** Present Mode
+[[https://github.com/rlister/org-present][Org-Present]] is a tool for presenting org mode documents in a slide show sort of format like ppt. Look into the [[https://systemcrafters.net/emacs-tips/presentations-with-org-present/][System Crafters]] guide to making org present mode look as good as possible / possibly creating an org-pretty mode!
+#+begin_src emacs-lisp :tangle no
+      ;;; These functions get called at the start and end present mode - they help make everything prettier 
+    (defun gp/org-present-start ()
+      ;; Center the presentation 
+      (visual-fill-column-mode 1)
+      ;; Disable line numbers
+      (display-line-numbers-mode 0)
+      ;; Tweak font sizes
+      (setq-local face-remapping-alist '((default (:height 1.3) variable-pitch)
+                                         (header-line (:height 4.0) variable-pitch)
+                                         (org-document-title (:height 1.75) org-document-title)
+                                         (org-code (:height 1.0) org-code)
+                                         (org-verbatim (:height 1.0) org-verbatim)
+                                         (org-block (:height 1.0) org-block)
+                                         (org-block-begin-line (:height 0.7) org-block)))
+      ;; Set a blank header line string to create blank space at the top
+      (variable-pitch-mode 1)
+      (setq-local header-line-format " ")
+
+      ;; Disable blinking cursor during the presentaiton
+      (blink-cursor-mode 0)
+      )
+
+    (defun gp/org-present-end ()
+      ;; Stop centering the document
+      (visual-fill-column-mode 0)
+      ;; Re-enable line numbers
+      (display-line-numbers-mode 1)
+      ;; Reset font customizations
+      (setq-local face-remapping-alist '((default variable-pitch default)))
+      (variable-pitch-mode 0)
+      ;; Remove blank header line 
+      (setq header-line-format nil)
+      ;; Re-enable blinking cursor
+      (blink-cursor-mode 1)
+      )
+
+  ;; This gets called between each slide
+  (defun gp/org-present-prepare-slide (buffer-name heading)
+    ;; Show only top-level headlines
+    (org-overview)
+
+    ;; Unfold the current entry
+    (org-show-entry)
+
+    ;; Show only direct subheadings of the slide but don't expand them
+    (org-show-children))
+
+    ;; To allow border padding in our presentations 
+    (use-package visual-fill-column
+      :init
+      (setq visual-fill-column-width 110
+            visual-fill-column-center-text t))
+
+
+    (use-package org-present
+      :after org
+      :general
+      ;; Set leader key binds 
+      (gp/local-leader-keys
+        :keymaps 'org-mode-map
+        "p" '(:ignore t :which-key "present")
+        "pp" '(org-present :which-key "Start org present")
+        "pq" '(org-present-quit :which-key "Quit Present Mode")
+        ;; Control text size
+        "p=" '(org-present-big :which-key "Large text")
+        "p-" '(org-present-small :which-key "Small text")
+        ;; Jump to first and last slide 
+        "p<" '(org-present-beginning :which-key "Jump To First Slide")
+        "p>" '(org-present-end :which-key "Jump To Last Slide")
+        "pr" '(org-present-read-only :which-key "Set Read Only")
+        "pw" '(org-present-read-write :which-key "Set Read/Write")
+        "p1" '(org-present-toggle-one-big-page :which-key "Show one big page")
+        )
+      (:keymaps 'org-present-mode-keymap
+                "H" 'org-present-prev)
+      (:keymaps 'org-present-mode-keymap
+                "L" 'org-present-next)
+      :config
+      ;; Add some basic hooks to control behaviour pertaining to
+      ;; different visual settings to be set when org-present mode is enabled.
+      (add-hook 'org-present-mode-hook 'gp/org-present-start)
+      (add-hook 'org-present-mode-quit-hook 'gp/org-present-end)
+      (add-hook 'org-present-after-navigate-functions 'gp/org-present-prepare-slide))
+#+end_src
+
+* LSP and Programming
+** LSP Mode
+Set up the LSP mode package
+#+begin_src emacs-lisp :tangle no
+  (use-package lsp-mode
+    ;;     (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+    :commands (lsp lsp-deferred)
+    :init
+    ;; Just some settings for optimization
+    (setq gc-cons-threshold 100000000)
+    (setq read-process-output-max (* 1024 1024)) ;; 1mb
+    (setq lsp-use-plists t)
+    (setq lsp-keymap-prefix "C-c l")
+    :hook ((c++-mode c-mode java-mode python-mode) . lsp-deferred)
+    :config
+    ;; Determines how often lsp-mode refreshes highlights, lenses, links, etc 
+    (setq lsp-idle-delay 0.250)
+    (lsp-enable-which-key-integration t))
+
+  (use-package lsp-ui
+    :commands lsp-ui-mode
+    :hook (lsp-mode . lsp-ui-mode))
+#+end_src
+** LSP Treemacs
+#+begin_src emacs-lisp :tangle no
+ (use-package lsp-treemacs
+   :after lsp)
+#+end_src
+** Treesitter
+Tree sitter allows advanced syntax highlighting among other features in emacs. See the following article for some more information about [[https://www.masteringemacs.org/article/how-to-get-started-tree-sitter][setting up tree-sitter]] in Emacs. The following code has emacs automatically install some languages from a wide variety of places. 
+
+#+begin_src emacs-lisp :tangle no
+  (setq treesit-language-source-alist
+     '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+       (cmake "https://github.com/uyha/tree-sitter-cmake")
+       (css "https://github.com/tree-sitter/tree-sitter-css")
+       (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+       (go "https://github.com/tree-sitter/tree-sitter-go")
+       (html "https://github.com/tree-sitter/tree-sitter-html")
+       (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+       (json "https://github.com/tree-sitter/tree-sitter-json")
+       (make "https://github.com/alemuller/tree-sitter-make")
+       (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+       (python "https://github.com/tree-sitter/tree-sitter-python")
+       (rust "https://github.com/tree-sitter/tree-sitter-rust")
+       (toml "https://github.com/tree-sitter/tree-sitter-toml")
+       (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+       (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+       (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+#+end_src
+** Yasnippet
+Best easy snippet plugin
+#+begin_src emacs-lisp
+  (use-package yasnippet
+    :config
+    (yas-global-mode 1))
+
+  (use-package yasnippet-snippets)
+#+end_src
+** Commenting
+This [[https://github.com/redguardtoo/evil-nerd-commenter][package]] allows smart auto commenting 
+#+begin_src emacs-lisp
+  (use-package evil-nerd-commenter
+    ;; :init (evilnc-default-hotkeys)
+    :config
+    ;; Setup the keybind to mimic Vim. ",," also works as a bind for this
+    (general-define-key
+     :states 'motion
+     "gc" 'evilnc-comment-operator
+     "gy" 'evilnc-yank-and-comment-operator))
+
+#+end_src
+** Languages
+*** Rust
+See more info about how to setup rust on this [[https://robert.kra.hn/posts/rust-emacs-setup/][site]]
+#+begin_src emacs-lisp
+  (use-package rust-mode)
+
+  (use-package ob-rust)
+
+  (use-package rustic
+  ;; :bind (:map rustic-mode-map
+  ;;             ("M-j" . lsp-ui-imenu)
+  ;;             ("M-?" . lsp-find-references)
+  ;;             ("C-c C-c l" . flycheck-list-herrors)
+  ;;             ("C-c C-c a" . lsp-execute-code-action)
+  ;;             ("C-c C-c r" . lsp-rename)
+  ;;             ("C-c C-c q" . lsp-workspace-restart)
+  ;;             ("C-c C-c Q" . lsp-workspace-shutdown)
+  ;;             ("C-c C-c s" . lsp-rust-analyzer-status))
+  ;; comment to disable rustfmt on save
+  :config
+  (setq rustic-format-on-save t)
+  (setq rustic-lsp-client 'eglot)
+
+  (add-hook 'rustic-mode-hook 'gp/rustic-mode-hook))
+
+  (defun gp/rustic-mode-hook()
+    ;; so that run C-c C-c C-r works without having to confirm, but
+    ;; don't try to save rust buffers that are not file visiting. 
+    ;; I don't know if this is actually important anymore
+    (when buffer-file-name
+      (setq-local buffer-save-without-query t))
+    (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+#+end_src
+*** Shell
+Emacs already has autocompletion for shell scripts. That, combined with the 'man-at-point' function I have created, and Emacs is already a very good shell editor. The only thing I am missing is syntax tasing with ShellCheck. To that end, I have included here a package that integrates with /Flymake/ called [[https://github.com/federicotdn/flymake-shellcheck][flymake-shellcheck]]. What it does is self-explanatory
+#+begin_src emacs-lisp
+  (use-package flymake-shellcheck
+    :commands flymake-shellcheck-load
+    :hook (sh-mode . flymake-mode)
+    :init
+    (add-hook 'sh-mode-hook 'flymake-shellcheck-load)
+    :config
+    (setq flymake-shellcheck-program "/usr/bin/shellcheck"
+          ;; Run syntax checker on contents of buffer, not file
+          flymake-shellcheck-use-file nil)
+    )
+
+#+end_src
+*** Common Lisp
+The following uses the "sly" package to manage commonlisp and what not in Emacs. Comes with a built-in repo and other functionality.
+#+begin_src emacs-lisp
+  (use-package sly
+    :commands sly)
+  ;; Expand macros inside SLY
+  (use-package sly-macrostep
+    :after sly)
+  ;; Add color support to sly repl. 
+  (use-package sly-repl-ansi-color
+    :after sly
+    :init (push 'sly-repl-ansi-color sly-contribs))
+#+end_src
+*** Java
+In order for lsp to work with java, the package 'lsp-java' needs to be installed. This package utilizes the Eclipse JDT Language server in order to fuction
+#+begin_src emacs-lisp
+  (use-package lsp-java
+    :after lsp)
+#+end_src
+*** Golang
+Import the [[https://github.com/dominikh/go-mode.el][Go-mode]] Emacs package:
+#+begin_src emacs-lisp
+(use-package go-mode)
+#+end_src
+*** GDScript
+The programming language of Godot - See [[https://github.com/godotengine/emacs-gdscript-mode][here]] for more info on the GDScript-mode package
+#+begin_src emacs-lisp
+  (use-package gdscript-mode
+    :hook (gdscript-mode . lsp-deferred))
+#+end_src
+*** Yuck
+Yuck is a lisp-like scripting language for the widget tool [[https://github.com/elkowar/eww][eww]]. Here, we use the package [[https://github.com/mmcjimsey26/yuck-mode][yuck-mode]] in order to configure some syntax-highlighting.
+#+begin_src emacs-lisp
+  (use-package yuck-mode)
+#+end_src
+Not more much more needs to be done here - yuck-mode should automatically attach onto =.yuck= extensions and do it's magic!
+*** LaTeX
+Latex is used for editing and creating text buffers. There are a variety of different useful utilities for editing LaTeX files. Here we configure a very useful package called [[https://github.com/emacs-straight/auctex][Auctex]] which provides a full environment for editing LaTeX. 
+#+begin_src emacs-lisp
+  (use-package auctex
+    :hook
+    ;; (latex-mode . auctex-mode)
+    ;; Get some fancy unicode symbols
+    (latex-mode . prettify-symbols-mode)
+    ;; Spellchecking in latex buffers
+    (latex-mode . flyspell-mode))
+#+end_src
+
+* Terminals
+** Vterm
+A natively compiled terminal emulator within Emacs. Don't have the term prompt regex set since it freaks out everything else. Plus, it seems kind of useless for me.
+#+begin_src emacs-lisp
+  (use-package vterm
+    :commands vterm
+    :config
+    (setq vterm-shell "zsh")
+    (setq vterm-max-scrollback 10000))
+#+end_src
+** Eshell
+An Emacs integrated shell environment written entirely in Elisp. Configuring Eshell is more difficult than other packages, as it's built in a different way that most packages and has different hook-in points for configuration. Here in this configuration, I have Eshell setup so that it loads a bunch of files and shit upon starting the mode. There is also some additional configuration for setting a customized prompt shell using the package. 
+
+Some packages that modify eshell here include [[https://github.com/akreisher/eshell-syntax-highlighting][Eshell Syntax Highlighting]] for zsh-style highlighting
+#+begin_src emacs-lisp
+  (defun gp/configure-eshell ()
+    ;; Save command history when commands are entered
+    (add-hook 'eshell-pre-command-hook 'eshell-save-some-history)
+    ;; Truncate buffer for performance
+    (add-to-list 'eshell-output-filter-functions 'eshell-truncate-buffer)
+    ;; Bind some useful keys for evil mode
+    (evil-define-key '(normal insert visual) eshell-mode-map (kbd "C-r") 'eshell-list-history)
+    (evil-define-key '(normal insert visual) eshell-mode-map (kbd "<home>") 'eshell-bol)
+    (evil-define-key '(insert visual) eshell-mode-map (kbd "C-u") 'eshell-kill-input)
+    (evil-normalize-keymaps)
+
+    (setq eshell-history-size 10000
+          eshell-buffer-maximum-lines 10000
+          eshell-hist-ignoredups t
+          eshell-scroll-to-bottom-on-input t))
+
+  ; Custom Eshell prompt
+  (use-package eshell-git-prompt
+    :after eshell)
+
+  ; Syntax Highlighting
+  (use-package eshell-syntax-highlighting
+    :after eshell
+    :config
+    (eshell-syntax-highlighting-global-mode +1))
+
+  ; Eshell did you mean
+  (use-package eshell-did-you-mean
+    :after eshell
+    :config
+    (eshell-did-you-mean-setup))
+
+  (use-package eshell
+    :hook (eshell-first-time-mode . gp/configure-eshell)
+    :config
+    (eshell-git-prompt-use-theme 'robbyrussell))
+#+end_src
+* PDF Management
+[[https://github.com/vedang/pdf-tools][PDF Tools]] is a package designed to replace Docview.el with more features and functionality
+#+begin_src emacs-lisp
+      (use-package pdf-tools
+        :init
+        (pdf-loader-install))
+#+end_src
+* Email
+Email is set up and configured in Emacs with mu4e, which uses the mu
+program in order to control and setup email
+
+The following is a new implementation of the mu4e code based off of my
+[[https://github.com/DoozkuV/doom-emacs-config/tree/main][Doom Emacs]] configuration
+#+begin_src emacs-lisp :tangle no
+  (use-package mu4e
+    ;; Mu is a package installed /outside/ of emacs
+    :ensure nil
+    :config
+    ;; This is set to 't' to avoid mail syncing issues when using mbsync
+    (setq mu4e-change-filenames-when-moving t
+          mu4e-use-maildirs-extension nil)
+
+    ;; Referesh mail using isync every 10 minutes
+    ;; NOTE: This is disabled in this config as this is being handled instead
+    ;; by a bash script
+    (setq mu4e-update-interval (* 10 60)
+          mu4e-get-mail-command "mailsync"
+          mu4e-maildir "~/.local/share/mail")
+
+    ;; Configure mail sending to use msmtp
+    (setq sendmail-program (executable-find "msmtp")
+          send-mail-function #'smtpmail-send-it
+          message-sendmail-f-is-evil t
+          message-sendmail-extra-arguments '("--read-envelope-from")
+          message-send-mail-function #'message-send-mail-with-sendmail)
+
+    (setq mu4e-contexts
+          (list
+           ;; Personal Account
+           (make-mu4e-context
+            :name "Professional"
+            :match-func
+            (lambda (msg)
+              (when msg
+                (string-prefix-p "/georgenpadron@gmail.com" (mu4e-message-field msg :maildir))))
+            :vars '((user-mail-address . "georgenpadron@gmail.com")
+                    (user-full-name . "George N Padron")
+                    ;; (smtpmail-smtp-server . "smtp.gmail.com")
+                    ;; (smtpmail-smtp-service . 465)
+                    ;; (smtpmail-stream-type . ssl)
+                    (mu4e-drafts-folder . "/georgenpadron@gmail.com/[Gmail]/Drafts")
+                    (mu4e-sent-folder . "/georgenpadron@gmail.com/[Gmail]/Sent")
+                    (mu4e-refile-folder . "/georgenpadron@gmail.com/[Gmail]/All Mail")
+                    (mu4e-trash-folder . "/georgenpadron@gmail.com/[Gmail]/Trash")
+                    (mu4e-maildir-shortcuts .
+                                            (("/georgenpadron@gmail.com/INBOX" . ?i)
+                                             ("/georgenpadron@gmail.com/[Gmail]/Sent Mail" . ?s)
+                                             ("/georgenpadron@gmail.com/[Gmail]/Trash" . ?t)
+                                             ("/georgenpadron@gmail.com/[Gmail]/Drafts" . ?d)
+                                             ("/georgenpadron@gmail.com/[Gmail]/All Mail" . ?a)))
+                    ))
+
+           ;; Wealth Account
+           (make-mu4e-context
+            :name "Wealth"
+            :match-func
+            (lambda (msg)
+              (when msg
+                (string-prefix-p "/wealth2005@gmail.com" (mu4e-message-field msg :maildir))))
+            :vars '((user-mail-address . "wealth2005@gmail.com")
+                    (user-full-name . "George N Padron")
+                    ;; (smtpmail-smtp-server . "smtp.gmail.com")
+                    ;; (smtpmail-smtp-service . 465)
+                    ;; (smtpmail-stream-type . ssl)
+                    (mu4e-drafts-folder . "/wealth2005@gmail.com/[Gmail]/Drafts")
+                    (mu4e-sent-folder . "/wealth2005@gmail.com/[Gmail]/Sent Mail")
+                    (mu4e-refile-folder . "/wealth2005@gmail.com/[Gmail]/All Mail")
+                    (mu4e-trash-folder . "/wealth2005@gmail.com/[Gmail]/Trash")
+                    (mu4e-maildir-shortcuts .
+                                            (("/wealth2005@gmail.com/INBOX" . ?i)
+                                             ("/wealth2005@gmail.com/[Gmail]/Sent Mail" . ?s)
+                                             ("/wealth2005@gmail.com/[Gmail]/Trash" . ?t)
+                                             ("/wealth2005@gmail.com/[Gmail]/Drafts" . ?d)
+                                             ("/wealth2005@gmail.com/[Gmail]/All Mail" . ?a)))
+                    ))
+           ;; george.n.padron@vanderbilt.edu Account
+           (make-mu4e-context
+            :name "Vanderbilt"
+            :match-func
+            (lambda (msg)
+              (when msg
+                (string-prefix-p "/george.n.padron@vanderbilt.edu" (mu4e-message-field msg :maildir))))
+            :vars '((user-mail-address . "george.n.padron@vanderbilt.edu")
+                    (user-full-name . "George N Padron")
+                    (smtpmail-smtp-server . "smtp.gmail.com")
+                    (smtpmail-smtp-service . 465)
+                    (smtpmail-stream-type . ssl)
+                    (mu4e-drafts-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Drafts")
+                    (mu4e-sent-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Sent Mail")
+                    (mu4e-refile-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/All Mail")
+                    (mu4e-trash-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Trash")
+                    (mu4e-maildir-shortcuts .
+                                            (("/george.n.padron@vanderbilt.edu/INBOX" . ?i)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/Sent Mail" . ?s)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/Trash" . ?t)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/Drafts" . ?d)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/All Mail" . ?a)))
+                    ))
+           ))
+    )
+#+end_src
+
+** Original Code
+This is the original version of the Email code that doesn't rely on Mutt-wizard
+
+#+begin_src emacs-lisp 
+  (use-package mu4e
+    ;; Mu is a package installed /outside/ of emacs
+    :ensure nil
+    :bind
+    ("C-c o m" . mu4e)
+    :config
+    ;; This is set to 't' to avoid mail syncing issues when using mbsync
+    (setq mu4e-change-filenames-when-moving t
+          mu4e-use-maildirs-extension nil)
+
+    ;; Referesh mail using isync every 10 minutes
+    ;; NOTE: This is disabled in this config as this is being handled instead
+    ;; by a bash script
+    (auth-source-pass-enable)
+    (setq mu4e-update-interval (* 10 60)
+          mu4e-get-mail-command "mbsync -a"
+          mu4e-maildir "~/.local/share/mail")
+
+    ;; Configuring SMTP to work properly with gmail
+    (setq message-send-mail-function 'smtpmail-send-it
+          starttls-use-gnutls t
+          smtpmail-starttls-credentials '(("smtp.gmail.com" 587 nil nil))
+          smtpmail-smtp-server "smtp.gmail.com"
+          smtpmail-default-smtp-server "smtp.gmail.com"
+          smtpmail-smtp-service 587)
+  
+    (setq mu4e-contexts
+          (list
+           ;; Personal Account
+           (make-mu4e-context
+            :name "Professional"
+            :match-func
+            (lambda (msg)
+              (when msg
+                (string-prefix-p "/georgenpadron@gmail.com" (mu4e-message-field msg :maildir))))
+            :vars '((user-mail-address . "georgenpadron@gmail.com")
+                    (user-full-name . "George N Padron")
+                    (mu4e-drafts-folder . "/georgenpadron@gmail.com/[Gmail]/Drafts")
+                    (mu4e-sent-folder . "/georgenpadron@gmail.com/[Gmail]/Sent")
+                    (mu4e-refile-folder . "/georgenpadron@gmail.com/[Gmail]/All Mail")
+                    (mu4e-trash-folder . "/georgenpadron@gmail.com/[Gmail]/Trash")
+                    (mu4e-maildir-shortcuts .
+                                            (("/georgenpadron@gmail.com/INBOX" . ?i)
+                                             ("/georgenpadron@gmail.com/[Gmail]/Sent Mail" . ?s)
+                                             ("/Georgenpadron@gmail.com/[Gmail]/Trash" . ?t)
+                                             ("/georgenpadron@gmail.com/[Gmail]/Drafts" . ?d)
+                                             ("/georgenpadron@gmail.com/[Gmail]/All Mail" . ?a)))
+                    (smtpmail-mail-address . "georgenpadron@gmail.com")
+                    (smtpmail-smtp-user . "georgenpadron@gmail.com")))
+
+           ;; Wealth Account
+           (make-mu4e-context
+            :name "Wealth"
+            :match-func
+            (lambda (msg)
+              (when msg
+                (string-prefix-p "/wealth2005@gmail.com" (mu4e-message-field msg :maildir))))
+            :vars '((user-mail-address . "wealth2005@gmail.com")
+                    (user-full-name . "George N Padron")
+                    (mu4e-drafts-folder . "/wealth2005@gmail.com/[Gmail]/Drafts")
+                    (mu4e-sent-folder . "/wealth2005@gmail.com/[Gmail]/Sent Mail")
+                    (mu4e-refile-folder . "/wealth2005@gmail.com/[Gmail]/All Mail")
+                    (mu4e-trash-folder . "/wealth2005@gmail.com/[Gmail]/Trash")
+                    (mu4e-maildir-shortcuts .
+                                            (("/wealth2005@gmail.com/INBOX" . ?i)
+                                             ("/wealth2005@gmail.com/[Gmail]/Sent Mail" . ?s)
+                                             ("/wealth2005@gmail.com/[Gmail]/Trash" . ?t)
+                                             ("/wealth2005@gmail.com/[Gmail]/Drafts" . ?d)
+                                             ("/wealth2005@gmail.com/[Gmail]/All Mail" . ?a)))
+                    (smtpmail-mail-address . "wealth2005@gmail.com")
+                    (smtpmail-smtp-user . "wealth2005@gmail.com")))
+
+           ;; george.n.padron@vanderbilt.edu Account
+           (make-mu4e-context
+            :name "Vanderbilt"
+            :match-func
+            (lambda (msg)
+              (when msg
+                (string-prefix-p "/george.n.padron@vanderbilt.edu" (mu4e-message-field msg :maildir))))
+            :vars '((user-mail-address . "george.n.padron@vanderbilt.edu")
+                    (user-full-name . "George N Padron")
+                    (smtpmail-smtp-server . "smtp.gmail.com")
+                    (smtpmail-smtp-service . 465)
+                    (smtpmail-stream-type . ssl)
+                    (mu4e-drafts-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Drafts")
+                    (mu4e-sent-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Sent Mail")
+                    (mu4e-refile-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/All Mail")
+                    (mu4e-trash-folder . "/george.n.padron@vanderbilt.edu/[Gmail]/Trash")
+                    (mu4e-maildir-shortcuts .
+                                            (("/george.n.padron@vanderbilt.edu/INBOX" . ?i)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/Sent Mail" . ?s)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/Trash" . ?t)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/Drafts" . ?d)
+                                             ("/george.n.padron@vanderbilt.edu/[Gmail]/All Mail" . ?a)))
+                    (smtpmail-mail-address . "george.n.padron@vanderbilt.edu")
+                    (smtpmail-smtp-user . "george.n.padron@vanderbilt.edu"))))))
+#+end_src
+* Extra Utilities
+** Helpful
+A package that helps improve documentation. Here we have remapped the default Emacs help functions with the helpful versions of them. 
+#+begin_src emacs-lisp
+(use-package helpful
+  :bind
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-command] . helpful-command)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-key] . helpful-key))
+#+end_src
+** Translator
+This functionality adds a translator to emacs.
+#+begin_src emacs-lisp
+  (use-package go-translate
+    :config
+    (setq gts-translate-list '(("it" "en") ("en" "it")))
+
+    (setq gts-default-translator
+          (gts-translator
+           :picker (gts-prompt-picker)
+           :engines (list (gts-bing-engine) (gts-google-engine))
+           :render (gts-buffer-render))))
+#+end_src
+** Kill all buffers function
+This function kills all buffers in the current session
+#+begin_src emacs-lisp
+  (defun kill-all-buffers ()
+    "Kills every buffer in the buffer list and then opens the dashboard."
+    (interactive)
+    (mapcar 'kill-buffer (buffer-list))
+    (delete-other-windows)
+    (dashboard-open))
+#+end_src
+** Auto Update System
+A simple function that should automatically update the system 
+#+begin_src emacs-lisp
+  (defun yay-update ()
+    "Run the Yay shell command to automatically update the system on arch"
+    (interactive)
+    (with-editor-async-shell-command "yay -Syu"))
+#+end_src
+** X At Point
+Some elisp code that runs man. To be used in conjunction with evil when editing shell files.
+#+begin_src emacs-lisp
+  (defun gp/man-at-point ()
+    "Display the man page for the word at point."
+    (interactive)
+    (let ((word (word-at-point)))
+      (if word
+          (man word)
+        (message "No word at point"))))
+
+
+  (defun gp/dict-at-point ()
+    "Display the dictionary page for the word at point."
+    (interactive)
+    (let ((word (word-at-point)))
+      (if word
+          (dictionary-search word)
+        (message "No word at point"))))
+#+end_src
+** Make Project Function
+The following function quickly makes a .projectile file in the specifie directory, thus enabling the setting in "project.
+** Runtime Performance
+This should be at the very end of the config. Here, we dial back the GC threshold s othat garbage collection happens more frequently but in less time.
+#+begin_src emacs-lisp
+  (setq gc-cons-threshold (* 2 1000 1000))
+#+end_src

@@ -129,6 +129,7 @@ a list
       shell-mode-hook
       vterm-mode-hook
       eshell-mode-hook
+      eat-mode-hook
       inferior-python-mode-hook
       helpful-mode-hook
       mu4e-view-mode-hook
@@ -751,8 +752,51 @@ Emacs.
     :init
     (when (file-directory-p "~/Projects")
       (setq projectile-project-search-path '( "~/Projects")))
-    (setq projectile-switch-project-action #'projectile-dired))
+    (setq projectile-switch-project-action #'projectile-find-file))
 #+end_src
+* Dired
+** Basic Utilities
+Set up a utility function for the program [[https://github.com/nik012003/ripdrag][Ripdrag]], so that we can call
+it on marked files from dired.
+#+begin_src emacs-lisp
+  (use-package all-the-icons
+    :if (display-graphic-p))
+
+  (defun gp/dired-ripdrag (&optional args)
+    "Call ripdrag on current file or all marked (or next ARG) files."
+    (interactive (list (dired-get-marked-files nil current-prefix-arg))
+		 dired-mode)
+    (apply 'call-process "ripdrag" nil nil nil (mapcar 'expand-file-name args)))
+#+end_src
+
+This package makes it so dotfiles can be hidden from dired.
+#+begin_src emacs-lisp
+(use-package dired-hide-dotfiles
+  :hook (dired-mode . dired-hide-dotfiles-mode))
+#+end_src
+** Dirvish
+Here we will use a package called [[https://github.com/alexluigit/dirvish][Dirvish]] to provide a modern rework
+of Dired
+#+begin_src emacs-lisp
+(use-package dirvish
+  :general
+  (gp/leader-keys
+    "j" '(dirvish-dwim :which-key "Dired Jump")) 
+  (general-define-key
+   :states 'normal
+   :keymaps 'dirvish-mode-map
+   "H" 'dired-hide-dotfiles-mode ; See dired-hide-dotfiles
+   ;; "z" 'zoxide-travel  
+   "q" 'dirvish-quit
+   "h" 'dired-up-directory
+   "l" 'dired-find-file
+   "E" 'gp/dired-ripdrag)
+  :custom
+  ;; Sets the attributes that are shown on each file 
+  (dirvish-attributes '(file-size file-time all-the-icons vc-state))
+  :init (dirvish-override-dired-mode))
+#+end_src
+
 * Org
 ** Basic Configuration
 #+begin_src emacs-lisp
@@ -872,6 +916,75 @@ executed for every single change in the config.
 	    (lambda () (add-hook 'after-save-hook #'gp/org-babel-tangle-config )))
 
 #+end_src
+** Org Roam
+Roam is the primary package used in this configuration for taking
+notes. TODO: Add support for multiple databases.  
+#+begin_src emacs-lisp
+(use-package org-roam
+  ;; :after org
+  :commands (org-roam-node-insert org-roam-node-find org-roam-capture)
+  :general
+  (gp/leader-keys
+    "r" '(:ignore t :which-key "roam")
+    "ri" '(org-roam-node-insert :which-key "Node Insert")
+    "rf" '(consult-org-roam-file-find :which-key "Node Find")
+
+    "rl" '(consult-org-roam-backlinks :which-key "Find Roam Backlinks")
+    "rL" '(consult-org-roam-forward-links :which-key "Find Roam Forward Links")
+
+    "rs" '(consult-org-roam-search :which-key "Search in Roam")
+    "rb" '(consult-org-roam-buffer :which-key "Search Roam Buffers") 
+    "rc" '(org-roam-capture :which-key "Node Capture")
+
+    "rq" '(org-roam-tag-add :which-key "Add Filetags")
+    "ru" '(org-roam-ui-open) :which-key "Open Roam UI")
+  :config
+  (setq org-roam-directory (file-truename (concat gp/org-directory "/roam")))
+  (org-roam-db-autosync-mode)
+  (setq org-roam-capture-templates
+	'(("d" "default" plain "%?" :target
+	   (file+head "${slug}.org" "#+title: ${title}\n")
+	   :unnarrowed t))))
+#+end_src
+
+We also add an integration with [[Consult]], to make searching through
+our roam database easier.
+#+begin_src emacs-lisp
+(use-package consult-org-roam
+  :ensure t
+  :after org-roam
+  :init
+  (require 'consult-org-roam)
+  (consult-org-roam-mode 1)
+  :custom
+  ;; Set `ripgrep' as the default 
+  (consult-org-roam-grep-func #'consult-ripgrep)
+  ;; Configure a custom narrow key for `consult-buffer'
+  (consult-org-roam-buffer-narrow-key ?r)
+  ;; Display org-roam buffers right after non-org-roam buffers
+  ;; in consult-buffer (and not down at the bottom)
+  (consult-org-roam-buffer-after-buffers t)
+  :config
+  ;; Eventually suppress previewing for certain functions
+  (consult-customize
+   consult-org-roam-forward-links
+   :preview-key "M-."))
+#+end_src
+
+Finally, we will enable a cool UI for org roam inspired by
+Obsidian. We have to bring in the =websocket= package to properly
+display the text. 
+#+begin_src emacs-lisp
+(use-package websocket
+  :after org-roam)
+(use-package org-roam-ui
+  :after org-roam
+  :config
+  (setq org-roam-ui-sync-theme t
+	org-roam-ui-follow t
+	org-roam-ui-update-on-save t
+	org-roam-ui-open-on-start t))
+#+end_src
 * Git
 We use [[https://magit.vc/][Magit]] to manage git in this configuration, as it is easily the
 best Git implementation currently available.
@@ -887,6 +1000,65 @@ best Git implementation currently available.
       "gd" '(magit-dispatch :which-key "git dispatch")
       "gf" '(magit-file-dispatch :which-key "git file dispatch")))
 
+#+end_src
+* TODO Terminals
+** Vterm
+
+#+begin_src emacs-lisp
+(use-package vterm
+  :commands vterm
+  :bind
+  ("C-c o t" . vterm)
+  ("C-x 4 t" . vterm-other-window)
+  :config
+  ;; (setq vterm-shell "fish")
+  (setq vterm-max-scrollback 10000))
+#+end_src
+** EAT
+[[https://codeberg.org/akib/emacs-eat][Eat]] is another emacs terminal emulator like [[Vterm]], but it is built
+entirely in Elisp. 
+#+begin_src emacs-lisp
+(use-package eat)
+#+end_src
+** Eshell
+#+begin_src emacs-lisp
+;; (defun gp/configure-eshell ()
+;;   (setq eshell-history-size 10000
+;; 	eshell-buffer-maximum-lines 10000
+;; 	eshell-hist-ignoredups t
+;; 	eshell-scroll-to-bottom-on-input t))
+
+(defun eshell-other-window ()
+  "Open `eshell' in a new window."
+  (interactive)
+  (let ((buf (eshell)))
+    (switch-to-buffer (other-buffer buf))
+    (switch-to-buffer-other-window buf)))
+;; Eshell
+(use-package eshell
+  :ensure nil
+  ;; :hook (eshell-first-time-mode . gp/configure-eshell)
+  :bind
+  ("C-c o e" . eshell)
+  ("C-x 4 e" . eshell-other-window))
+
+(use-package eshell-syntax-highlighting
+  :after eshell
+  :config
+  (eshell-syntax-highlighting-global-mode +1))
+
+(use-package eshell-did-you-mean
+  :after eshell
+  :config
+  (eshell-did-you-mean-setup))
+
+;; Allows visual commands ran in eshell to open in vterm
+;; (use-package eshell-vterm
+;;   :load-path "external/eshell-vterm"
+;;   :after eshell
+;;   :config
+;;   (eshell-vterm-mode)
+;;   (defalias 'eshell/v 'eshell-exec-visual))
 #+end_src
 * Utilities
 ** Helpful
@@ -1202,5 +1374,5 @@ reasonable time.
 #+end_src
 
 # Local Variables:
-# jinx-local-words: "Docview Flyspell Keybinds Nuspell"
+# jinx-local-words: "Dired Docview Flyspell Keybinds Nuspell dired"
 # End:

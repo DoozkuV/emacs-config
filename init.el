@@ -52,6 +52,7 @@ If the file does not exist, it will be created at the specified directory."
     shell-mode-hook
     vterm-mode-hook
     eshell-mode-hook
+    eat-mode-hook
     inferior-python-mode-hook
     helpful-mode-hook
     mu4e-view-mode-hook
@@ -540,7 +541,37 @@ If the file does not exist, it will be created at the specified directory."
   :init
   (when (file-directory-p "~/Projects")
     (setq projectile-project-search-path '( "~/Projects")))
-  (setq projectile-switch-project-action #'projectile-dired))
+  (setq projectile-switch-project-action #'projectile-find-file))
+
+(use-package all-the-icons
+  :if (display-graphic-p))
+
+(defun gp/dired-ripdrag (&optional args)
+  "Call ripdrag on current file or all marked (or next ARG) files."
+  (interactive (list (dired-get-marked-files nil current-prefix-arg))
+	       dired-mode)
+  (apply 'call-process "ripdrag" nil nil nil (mapcar 'expand-file-name args)))
+
+(use-package dired-hide-dotfiles
+  :hook (dired-mode . dired-hide-dotfiles-mode))
+
+(use-package dirvish
+  :general
+  (gp/leader-keys
+    "j" '(dirvish-dwim :which-key "Dired Jump")) 
+  (general-define-key
+   :states 'normal
+   :keymaps 'dirvish-mode-map
+   "H" 'dired-hide-dotfiles-mode ; See dired-hide-dotfiles
+   ;; "z" 'zoxide-travel  
+   "q" 'dirvish-quit
+   "h" 'dired-up-directory
+   "l" 'dired-find-file
+   "E" 'gp/dired-ripdrag)
+  :custom
+  ;; Sets the attributes that are shown on each file 
+  (dirvish-attributes '(file-size file-time all-the-icons vc-state))
+  :init (dirvish-override-dired-mode))
 
 (use-package org
   :ensure nil
@@ -651,6 +682,62 @@ If the file does not exist, it will be created at the specified directory."
 (add-hook 'org-mode-hook
 	  (lambda () (add-hook 'after-save-hook #'gp/org-babel-tangle-config )))
 
+(use-package org-roam
+  ;; :after org
+  :commands (org-roam-node-insert org-roam-node-find org-roam-capture)
+  :general
+  (gp/leader-keys
+    "r" '(:ignore t :which-key "roam")
+    "ri" '(org-roam-node-insert :which-key "Node Insert")
+    "rf" '(consult-org-roam-file-find :which-key "Node Find")
+
+    "rl" '(consult-org-roam-backlinks :which-key "Find Roam Backlinks")
+    "rL" '(consult-org-roam-forward-links :which-key "Find Roam Forward Links")
+
+    "rs" '(consult-org-roam-search :which-key "Search in Roam")
+    "rb" '(consult-org-roam-buffer :which-key "Search Roam Buffers") 
+    "rc" '(org-roam-capture :which-key "Node Capture")
+
+    "rq" '(org-roam-tag-add :which-key "Add Filetags")
+    "ru" '(org-roam-ui-open) :which-key "Open Roam UI")
+  :config
+  (setq org-roam-directory (file-truename (concat gp/org-directory "/roam")))
+  (org-roam-db-autosync-mode)
+  (setq org-roam-capture-templates
+	'(("d" "default" plain "%?" :target
+	   (file+head "${slug}.org" "#+title: ${title}\n")
+	   :unnarrowed t))))
+
+(use-package consult-org-roam
+  :ensure t
+  :after org-roam
+  :init
+  (require 'consult-org-roam)
+  (consult-org-roam-mode 1)
+  :custom
+  ;; Set `ripgrep' as the default 
+  (consult-org-roam-grep-func #'consult-ripgrep)
+  ;; Configure a custom narrow key for `consult-buffer'
+  (consult-org-roam-buffer-narrow-key ?r)
+  ;; Display org-roam buffers right after non-org-roam buffers
+  ;; in consult-buffer (and not down at the bottom)
+  (consult-org-roam-buffer-after-buffers t)
+  :config
+  ;; Eventually suppress previewing for certain functions
+  (consult-customize
+   consult-org-roam-forward-links
+   :preview-key "M-."))
+
+(use-package websocket
+  :after org-roam)
+(use-package org-roam-ui
+  :after org-roam
+  :config
+  (setq org-roam-ui-sync-theme t
+	org-roam-ui-follow t
+	org-roam-ui-update-on-save t
+	org-roam-ui-open-on-start t))
+
 (use-package transient) ;; Fix a weird bug with elpaca
 (use-package magit
   :commands (magit-status magit-dispatch magit-file-dispatch)
@@ -661,6 +748,55 @@ If the file does not exist, it will be created at the specified directory."
     "gg" '(magit :which-key "git open")
     "gd" '(magit-dispatch :which-key "git dispatch")
     "gf" '(magit-file-dispatch :which-key "git file dispatch")))
+
+(use-package vterm
+  :commands vterm
+  :bind
+  ("C-c o t" . vterm)
+  ("C-x 4 t" . vterm-other-window)
+  :config
+  ;; (setq vterm-shell "fish")
+  (setq vterm-max-scrollback 10000))
+
+(use-package eat)
+
+;; (defun gp/configure-eshell ()
+;;   (setq eshell-history-size 10000
+;; 	eshell-buffer-maximum-lines 10000
+;; 	eshell-hist-ignoredups t
+;; 	eshell-scroll-to-bottom-on-input t))
+
+(defun eshell-other-window ()
+  "Open `eshell' in a new window."
+  (interactive)
+  (let ((buf (eshell)))
+    (switch-to-buffer (other-buffer buf))
+    (switch-to-buffer-other-window buf)))
+;; Eshell
+(use-package eshell
+  :ensure nil
+  ;; :hook (eshell-first-time-mode . gp/configure-eshell)
+  :bind
+  ("C-c o e" . eshell)
+  ("C-x 4 e" . eshell-other-window))
+
+(use-package eshell-syntax-highlighting
+  :after eshell
+  :config
+  (eshell-syntax-highlighting-global-mode +1))
+
+(use-package eshell-did-you-mean
+  :after eshell
+  :config
+  (eshell-did-you-mean-setup))
+
+;; Allows visual commands ran in eshell to open in vterm
+;; (use-package eshell-vterm
+;;   :load-path "external/eshell-vterm"
+;;   :after eshell
+;;   :config
+;;   (eshell-vterm-mode)
+;;   (defalias 'eshell/v 'eshell-exec-visual))
 
 (use-package helpful
   :bind

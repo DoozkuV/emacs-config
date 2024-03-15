@@ -13,7 +13,7 @@
 - Rework Dired
 - Set up terminals (Eshell and Vterm) 
 
-
+  
 * Initial Setup
 Basic settings and preliminary steps are taken at this stage of the
 configuration. 
@@ -207,7 +207,7 @@ for =auto-fill-mode= to proc on text buffers.
 	    gp/auto-fill-enabled-modes
 	    (lambda () (auto-fill-mode 1)))))
 
-  (gp/set-hook-on-modes gp/electric-pair-enabled-modes
+  (gp/set-hook-on-modes gp/auto-fill-enabled-modes
 			  (lambda () (auto-fill-mode 1)))
 #+end_src
 * Package Setup
@@ -397,8 +397,8 @@ of this configuration.
       "or" '(gts-do-translate :which-key "Open Translator")
       "od" '(dictionary-search :which-key "Consult Dictionary")
       "oa" '(org-agenda :which-key "Open Org Agenda")
-      "ot" '(vterm :which-key "Open Terminal")
-      "oT" '(vterm-other-window :which-key "Open Terminal")
+      "ot" '(eat :which-key "Open Terminal")
+      "oT" '(eat-other-window :which-key "Open Terminal")
       "oi" '(ielm :which-key "Open Ielm")
       "or" '(gts-do-translate :which-key "Open Translator")
       "oe" '(eshell :which-key "Open Eshell")
@@ -756,10 +756,26 @@ Github page.
 #+end_src
 * Programming
 ** Lisp Editing
+[[https://github.com/emacs-evil/evil-cleverparens][Evil Cleverparens]] makes evil work nicer when editing lisp code.
 #+begin_src emacs-lisp
   (use-package evil-cleverparens
     :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
 #+end_src
+*** Racket
+Major mode for editing Racket code
+#+begin_src emacs-lisp
+  (use-package racket-mode
+    :ensure (:source "MELPA")
+    :general
+    (gp/local-leader-keys
+      :keymaps 'racket-mode-map
+      "t" '(racket-test :which-key "Run Racket Tests")
+      "r" '(:ignore t :which-key "run")
+      "rr" '(racket-run-and-switch-to-repl :which-key "Run and Switch to REPL")
+      "rp" '(racket-run-module-at-point :which-key "Run Module at
+    Point")))
+#+end_src
+
 * Projectile
 [[https://github.com/bbatsov/projectile][Projectile]] is a power package for managing projects, and in my opinion
 is superior to the default =package.el= that is built-in to
@@ -1020,10 +1036,10 @@ best Git implementation currently available.
       "gf" '(magit-file-dispatch :which-key "git file dispatch")))
 
 #+end_src
-* TODO Terminals
+* Terminals
 ** Vterm
-
-#+begin_src emacs-lisp
+For now, we will be testing eat over this package. 
+#+begin_src emacs-lisp :tangle nil
 (use-package vterm
   :commands vterm
   :bind
@@ -1037,47 +1053,48 @@ best Git implementation currently available.
 [[https://codeberg.org/akib/emacs-eat][Eat]] is another emacs terminal emulator like [[Vterm]], but it is built
 entirely in Elisp. 
 #+begin_src emacs-lisp
-(use-package eat)
+  (use-package eat
+    :general
+    (gp/local-leader-keys
+      :keymaps 'eat-mode-map
+      "j" '(eat-mode-map :which-key "Semi-Char Mode")
+      "l" '(eat-line-mode :which-key "Line Mode")
+      "n" '(eat-next-shell-prompt :which-key "Next Prompt")
+      "p" '(eat-previous-shell-prompt :which-key "Previous Prompt")
+      "c" '(eat-char-mode :which-key "Char Mode")))
 #+end_src
 ** Eshell
 #+begin_src emacs-lisp
-;; (defun gp/configure-eshell ()
-;;   (setq eshell-history-size 10000
-;; 	eshell-buffer-maximum-lines 10000
-;; 	eshell-hist-ignoredups t
-;; 	eshell-scroll-to-bottom-on-input t))
+  ;; (defun gp/configure-eshell ()
+  ;;   (setq eshell-history-size 10000
+  ;; 	eshell-buffer-maximum-lines 10000
+  ;; 	eshell-hist-ignoredups t
+  ;; 	eshell-scroll-to-bottom-on-input t))
 
-(defun eshell-other-window ()
-  "Open `eshell' in a new window."
-  (interactive)
-  (let ((buf (eshell)))
-    (switch-to-buffer (other-buffer buf))
-    (switch-to-buffer-other-window buf)))
-;; Eshell
-(use-package eshell
-  :ensure nil
-  ;; :hook (eshell-first-time-mode . gp/configure-eshell)
-  :bind
-  ("C-c o e" . eshell)
-  ("C-x 4 e" . eshell-other-window))
+  (defun eshell-other-window ()
+    "Open `eshell' in a new window."
+    (interactive)
+    (let ((buf (eshell)))
+      (switch-to-buffer (other-buffer buf))
+      (switch-to-buffer-other-window buf)))
+  ;; Eshell
+  (use-package eshell
+    :ensure nil
+    ;; :hook (eshell-first-time-mode . gp/configure-eshell)
+    :bind
+    ("C-c o e" . eshell)
+    ("C-x 4 e" . eshell-other-window))
 
-(use-package eshell-syntax-highlighting
-  :after eshell
-  :config
-  (eshell-syntax-highlighting-global-mode +1))
+  (use-package eshell-syntax-highlighting
+    :after eshell
+    :config
+    (eshell-syntax-highlighting-global-mode +1))
 
-(use-package eshell-did-you-mean
-  :after eshell
-  :config
-  (eshell-did-you-mean-setup))
+  (use-package eshell-did-you-mean
+    :after eshell
+    :config
+    (eshell-did-you-mean-setup))
 
-;; Allows visual commands ran in eshell to open in vterm
-;; (use-package eshell-vterm
-;;   :load-path "external/eshell-vterm"
-;;   :after eshell
-;;   :config
-;;   (eshell-vterm-mode)
-;;   (defalias 'eshell/v 'eshell-exec-visual))
 #+end_src
 * Utilities
 ** Helpful
@@ -1409,5 +1426,5 @@ reasonable time.
 #+end_src
 
 # Local Variables:
-# jinx-local-words: "Dired Docview Flyspell Keybinds Modeline Nuspell dired"
+# jinx-local-words: "Dired Docview Flyspell Keybinds Modeline Nuspell Vterm dired"
 # End:

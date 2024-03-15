@@ -113,7 +113,7 @@ If the file does not exist, it will be created at the specified directory."
 	  gp/auto-fill-enabled-modes
 	  (lambda () (auto-fill-mode 1)))))
 
-(gp/set-hook-on-modes gp/electric-pair-enabled-modes
+(gp/set-hook-on-modes gp/auto-fill-enabled-modes
 			(lambda () (auto-fill-mode 1)))
 
 (defvar elpaca-installer-version 0.7)
@@ -257,8 +257,8 @@ If the file does not exist, it will be created at the specified directory."
     "or" '(gts-do-translate :which-key "Open Translator")
     "od" '(dictionary-search :which-key "Consult Dictionary")
     "oa" '(org-agenda :which-key "Open Org Agenda")
-    "ot" '(vterm :which-key "Open Terminal")
-    "oT" '(vterm-other-window :which-key "Open Terminal")
+    "ot" '(eat :which-key "Open Terminal")
+    "oT" '(eat-other-window :which-key "Open Terminal")
     "oi" '(ielm :which-key "Open Ielm")
     "or" '(gts-do-translate :which-key "Open Translator")
     "oe" '(eshell :which-key "Open Eshell")
@@ -548,6 +548,17 @@ If the file does not exist, it will be created at the specified directory."
 (use-package evil-cleverparens
   :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
 
+(use-package racket-mode
+  :ensure (:source "MELPA")
+  :general
+  (gp/local-leader-keys
+    :keymaps 'racket-mode-map
+    "t" '(racket-test :which-key "Run Racket Tests")
+    "r" '(:ignore t :which-key "run")
+    "rr" '(racket-run-and-switch-to-repl :which-key "Run and Switch to REPL")
+    "rp" '(racket-run-module-at-point :which-key "Run Module at
+  Point")))
+
 (use-package projectile
   :diminish projectile-mode
   :config (projectile-mode 1)
@@ -762,16 +773,15 @@ If the file does not exist, it will be created at the specified directory."
     "gd" '(magit-dispatch :which-key "git dispatch")
     "gf" '(magit-file-dispatch :which-key "git file dispatch")))
 
-(use-package vterm
-  :commands vterm
-  :bind
-  ("C-c o t" . vterm)
-  ("C-x 4 t" . vterm-other-window)
-  :config
-  ;; (setq vterm-shell "fish")
-  (setq vterm-max-scrollback 10000))
-
-(use-package eat)
+(use-package eat
+  :general
+  (gp/local-leader-keys
+    :keymaps 'eat-mode-map
+    "j" '(eat-mode-map :which-key "Semi-Char Mode")
+    "l" '(eat-line-mode :which-key "Line Mode")
+    "n" '(eat-next-shell-prompt :which-key "Next Prompt")
+    "p" '(eat-previous-shell-prompt :which-key "Previous Prompt")
+    "c" '(eat-char-mode :which-key "Char Mode")))
 
 ;; (defun gp/configure-eshell ()
 ;;   (setq eshell-history-size 10000
@@ -802,14 +812,6 @@ If the file does not exist, it will be created at the specified directory."
   :after eshell
   :config
   (eshell-did-you-mean-setup))
-
-;; Allows visual commands ran in eshell to open in vterm
-;; (use-package eshell-vterm
-;;   :load-path "external/eshell-vterm"
-;;   :after eshell
-;;   :config
-;;   (eshell-vterm-mode)
-;;   (defalias 'eshell/v 'eshell-exec-visual))
 
 (use-package helpful
   :bind

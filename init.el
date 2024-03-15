@@ -11,6 +11,13 @@
 
 (recentf-mode 1) ; Enable file history
 
+(defvar gp/laptop-name "doozkulaptop"
+"The name of my laptop")
+
+
+(defvar gp/desktop-name "doozkudesktop"
+"The name of my desktop")
+
 (defun gp/config-path-file-expand (file-name)
   "Returns a canonicalized path of this Emacs configuration, based on the variable
 `config-path'. It does not matter if you begin the path with a '/' character, the
@@ -909,8 +916,15 @@ If programs is nil, it will act as if nothing is there."
    TeX-output-mode-hook)
  (lambda () (setq-local scroll-margin 0)))
 
+(use-package doom-themes
+  :if (string= (system-name) gp/desktop-name)
+  :config (load-theme 'doom-dracula :no-confirm)
+  :commands (load-theme consult-theme))
+
 (use-package catppuccin-theme
-  :init (load-theme 'catppuccin :no-confirm))
+  :if (string= (system-name) gp/laptop-name)
+  :config
+  (load-theme 'catppuccin :no-confirm))
 
 (use-package doom-modeline
   :custom

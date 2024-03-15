@@ -59,6 +59,16 @@ Enables file history.
 #+end_src
 ** Global Variables and Utilities 
 
+Simple variables for the names of my laptop and desktop computers
+#+begin_src emacs-lisp
+  (defvar gp/laptop-name "doozkulaptop"
+  "The name of my laptop")
+
+  
+  (defvar gp/desktop-name "doozkudesktop"
+  "The name of my desktop")
+#+end_src
+
 Simple utility function for returning the path and creating files at
 =user-emacs-directory=. 
 #+begin_src emacs-lisp
@@ -1203,9 +1213,19 @@ Disables the margin in specific modes
    (lambda () (setq-local scroll-margin 0)))
 #+end_src
 ** Color scheme
+If we are using the laptop configuration, then we want to use the
+Catppuccin color-scheme. Otherwise, we want to enable doom themes and
+set a theme in there
 #+begin_src emacs-lisp
+  (use-package doom-themes
+    :if (string= (system-name) gp/desktop-name)
+    :config (load-theme 'doom-dracula :no-confirm)
+    :commands (load-theme consult-theme))
+
   (use-package catppuccin-theme
-    :init (load-theme 'catppuccin :no-confirm))
+    :if (string= (system-name) gp/laptop-name)
+    :config
+    (load-theme 'catppuccin :no-confirm))
 #+end_src
 ** Modeline
 For this configuration, we use [[https://github.com/seagle0128/doom-modeline][Doom Modeline]] for a clean minimalist

@@ -11,12 +11,15 @@
 
 (recentf-mode 1) ; Enable file history
 
-(defvar gp/laptop-name "doozkulaptop"
-"The name of my laptop")
+(defvar gp/is-laptop nil
+  "Whether the config is on the laptop")
+(defvar gp/is-desktop nil
+  "Whether the config is on the desktop")
 
-
-(defvar gp/desktop-name "doozkudesktop"
-"The name of my desktop")
+(cond ((string= (system-name) "doozkulaptop")
+       (setq gp/is-laptop t))
+      ((string= (system-name) "doozkudesktop")
+       (setq gp/is-desktop t)))
 
 (defun gp/config-path-file-expand (file-name)
   "Returns a canonicalized path of this Emacs configuration, based on the variable
@@ -917,14 +920,16 @@ If programs is nil, it will act as if nothing is there."
  (lambda () (setq-local scroll-margin 0)))
 
 (use-package doom-themes
-  :if (string= (system-name) gp/desktop-name)
+  :if gp/is-desktop
   :config (load-theme 'doom-dracula :no-confirm)
   :commands (load-theme consult-theme))
 
 (use-package catppuccin-theme
-  :if (string= (system-name) gp/laptop-name)
+  :if gp/is-laptop
   :config
   (load-theme 'catppuccin :no-confirm))
+
+(set-face-attribute 'default nil :font "RobotoMono Nerd Font" :height 110)
 
 (use-package doom-modeline
   :custom
@@ -932,7 +937,8 @@ If programs is nil, it will act as if nothing is there."
   (doom-modeline-enable-word-count nil)
   :init (doom-modeline-mode 1)
   :config
-  (display-battery-mode 1))
+  (when gp/is-laptop
+    (display-battery-mode 1)))
 
 (defvar gp/background-opacity 75
   "The default opacity of the background when transparency mode is toggled on.")

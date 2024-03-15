@@ -61,12 +61,15 @@ Enables file history.
 
 Simple variables for the names of my laptop and desktop computers
 #+begin_src emacs-lisp
-  (defvar gp/laptop-name "doozkulaptop"
-  "The name of my laptop")
+  (defvar gp/is-laptop nil
+    "Whether the config is on the laptop")
+  (defvar gp/is-desktop nil
+    "Whether the config is on the desktop")
 
-  
-  (defvar gp/desktop-name "doozkudesktop"
-  "The name of my desktop")
+  (cond ((string= (system-name) "doozkulaptop")
+	 (setq gp/is-laptop t))
+	((string= (system-name) "doozkudesktop")
+	 (setq gp/is-desktop t)))
 #+end_src
 
 Simple utility function for returning the path and creating files at
@@ -1182,7 +1185,7 @@ TODO: Update this section and make it into it's own repository.
 
 #+end_src
 * Themeing
-** Minimal Setup
+** Minimalist Window
 Here are some configuration to disable the ugly menu bars, scroll
 bars, and more. 
 #+begin_src emacs-lisp
@@ -1218,14 +1221,19 @@ Catppuccin color-scheme. Otherwise, we want to enable doom themes and
 set a theme in there
 #+begin_src emacs-lisp
   (use-package doom-themes
-    :if (string= (system-name) gp/desktop-name)
+    :if gp/is-desktop
     :config (load-theme 'doom-dracula :no-confirm)
     :commands (load-theme consult-theme))
 
   (use-package catppuccin-theme
-    :if (string= (system-name) gp/laptop-name)
+    :if gp/is-laptop
     :config
     (load-theme 'catppuccin :no-confirm))
+#+end_src
+** Font
+The default font is set here.
+#+begin_src emacs-lisp
+(set-face-attribute 'default nil :font "RobotoMono Nerd Font" :height 110)
 #+end_src
 ** Modeline
 For this configuration, we use [[https://github.com/seagle0128/doom-modeline][Doom Modeline]] for a clean minimalist
@@ -1237,7 +1245,8 @@ look that also has built in synergy with Vim. In order
     (doom-modeline-enable-word-count nil)
     :init (doom-modeline-mode 1)
     :config
-    (display-battery-mode 1))
+    (when gp/is-laptop
+      (display-battery-mode 1)))
 #+end_src
 ** Opacity
 The following is code to enable opacity settings by default in
@@ -1394,5 +1403,5 @@ reasonable time.
 #+end_src
 
 # Local Variables:
-# jinx-local-words: "Dired Docview Flyspell Keybinds Nuspell dired"
+# jinx-local-words: "Dired Docview Flyspell Keybinds Modeline Nuspell dired"
 # End:

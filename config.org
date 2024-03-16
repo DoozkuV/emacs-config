@@ -12,6 +12,12 @@
 Basic settings and preliminary steps are taken at this stage of the
 configuration. 
 
+First, we set this configuration to use lexical binding. We can only
+do this via a file-local variable, so we add the following file local
+variable to the start of the file.
+#+begin_src emacs-lisp
+;;; -*- lexical-binding: t -*-
+#+end_src
 This setting is important for decreasing load times. By raising the
 garbage collection threshold, we make it so we can load our
 configuration quicker. We will [[Reset Garbage Collection]] at the end of
@@ -287,25 +293,26 @@ More information about Elpaca can be seen on [[https://www.youtube.com/watch?v=5
 Evil is the main package for providing Vim emulation from within
 Emacs. 
 #+begin_src emacs-lisp
-  (use-package evil
-    :demand t ;; Prevent lazy loading
-    :bind (("<escape>" . keyboard-escape-quit))
-    :init
-    (setq evil-want-integration t)
-    ;; Enables evil within the minibuffer
-    ;; (setq evil-want-minibuffer t)
-    (setq evil-want-keybinding nil)
-    (setq evil-want-C-u-scroll t)
-    (setq evil-want-C-i-jump nil)
-    (setq evil-undo-system 'undo-redo)
-    (setq evil-auto-indent t)
-    ;; (setq evil-lookup-func 'embark-act)
+    (use-package evil
+      :demand t ;; Prevent lazy loading
+      :bind (("<escape>" . keyboard-escape-quit))
+      :init
+      (setq evil-want-integration t)
+      ;; Enables evil within the minibuffer
+      ;; (setq evil-want-minibuffer t)
+      (setq evil-want-keybinding nil)
+      (setq evil-want-C-u-scroll t)
+      (setq evil-want-C-i-jump nil)
+      (setq evil-undo-system 'undo-redo)
+      (setq evil-auto-indent t)
+      ;; (setq evil-lookup-func 'embark-act)
 
-    :config
-    (evil-mode 1)
-    ;; Make "C-g" act like an escape button when you are in insert mode
-    (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
-    (define-key evil-insert-state-map (kbd "C-e") 'end-of-line))
+      :config
+      (evil-mode 1)
+      ;; Make "C-g" act like an escape button when you are in insert mode
+      (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+      (define-key evil-insert-state-map (kbd "C-e") 'end-of-line)
+      (gp/setup-evil-lookup-modes))
 
 #+end_src
 
@@ -331,7 +338,9 @@ enable org bindings in the =agenda= view.
     #+end_src
 ** Evil Lookup Functions
 Here we define a custom function for the =K= binding in evil. We will
-customize this depending on the buffer in question.
+customize this depending on the buffer in question. Keep in mind that
+the hooks function here depends on a =closure=, which only works when
+[[info:elisp#Lexical Binding][elisp#Lexical Binding]] is enabled.
 #+begin_src emacs-lisp
   ;;; Set up variables for the function
   (defvar gp/evil-lookup-modes-list
@@ -346,9 +355,19 @@ customize this depending on the buffer in question.
 
   (defun gp/setup-evil-lookup-modes ()
     "Sets up the evil lookup mode hooks" 
-    (setq evil-lookup-func gp/evil-lookup-func-default)
+    (setq-default evil-lookup-func gp/evil-lookup-func-default)
     (dolist (mode-pair gp/evil-lookup-modes-list)
-      (add-hook (car mode-pair) (cdr mode-pair))))
+       (add-hook (car mode-pair)
+		 (lambda ()
+		   (setq-local evil-lookup-func (cdr mode-pair))))))
+#+end_src
+
+For text buffers, the =dict-at-point= function is created.
+#+begin_src emacs-lisp
+(defun gp/dict-at-point ()
+  "Calls the `dictionary-search' function on the word at point."
+  (interactive)
+  (dictionary-search (word-at-point)))
 #+end_src
 ** General
 [[https://github.com/noctuid/general.el?tab=readme-ov-file][General.el]] is a powerful package for defining keybinds. It provides

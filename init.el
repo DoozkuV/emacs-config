@@ -1,3 +1,5 @@
+;;; -*- lexical-binding: t -*-
+
 (setq gc-cons-threshold (* 50 1000 1000))
 
 (setq native-comp-async-report-warnings-errors 'silent)
@@ -181,7 +183,8 @@ If the file does not exist, it will be created at the specified directory."
   (evil-mode 1)
   ;; Make "C-g" act like an escape button when you are in insert mode
   (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
-  (define-key evil-insert-state-map (kbd "C-e") 'end-of-line))
+  (define-key evil-insert-state-map (kbd "C-e") 'end-of-line)
+  (gp/setup-evil-lookup-modes))
 
 (use-package evil-collection
   :after evil
@@ -210,9 +213,16 @@ If the file does not exist, it will be created at the specified directory."
 
 (defun gp/setup-evil-lookup-modes ()
   "Sets up the evil lookup mode hooks" 
-  (setq evil-lookup-func gp/evil-lookup-func-default)
+  (setq-default evil-lookup-func gp/evil-lookup-func-default)
   (dolist (mode-pair gp/evil-lookup-modes-list)
-    (add-hook (car mode-pair) (cdr mode-pair))))
+     (add-hook (car mode-pair)
+	       (lambda ()
+		 (setq-local evil-lookup-func (cdr mode-pair))))))
+
+(defun gp/dict-at-point ()
+  "Calls the `dictionary-search' function on the word at point."
+  (interactive)
+  (dictionary-search (word-at-point)))
 
 (use-package general
   :config

@@ -1,17 +1,11 @@
-# -*- electric-pair-mode: nil -*-
+# -*- electric-pair-mode: nil; evil-lookup-func: helpful-at-point -*-
 #+title: Modern Emacs Configuration
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
 #+STARTUP: overview
 
 * TODO Packages to Add and Performance Hogs
-- Flyspell: Slows down org-mode quite a bit.
-  - *Solution*: Use a better spellchecking back-end like [[https://github.com/minad/jinx][Jinx]].
-- Add CAPEs for dabbrev and more.
 - Add LSP Programming support
-- Add support for org-roam and other org-functionality
-- Add mu4e email
-- Rework Dired
-- Set up terminals (Eshell and Vterm) 
+- Improve support for org-roam and other org functionality
 
   
 * Initial Setup
@@ -329,6 +323,27 @@ enable org bindings in the =agenda= view.
     (require 'evil-org-agenda)
     (evil-org-agenda-set-keys))
     #+end_src
+** Evil Lookup Functions
+Here we define a custom function for the =K= binding in evil. We will
+customize this depending on the buffer in question.
+#+begin_src emacs-lisp
+  ;;; Set up variables for the function
+  (defvar gp/evil-lookup-modes-list
+    '((lsp-mode-hook . lsp-describe-thing-at-point)
+      (sh-mode-hook . gp/man-at-point)
+      (org-mode-hook . gp/dict-at-point))
+    "A list containing mode hooks and corresponding functions to be
+    called by 'evil-lookup-func' within those modes.")
+
+  (defvar gp/evil-lookup-func-default 'helpful-at-point
+    "The default function to be called by 'evil-lookup-func'")
+
+  (defun gp/setup-evil-lookup-modes ()
+    "Sets up the evil lookup mode hooks" 
+    (setq evil-lookup-func gp/evil-lookup-func-default)
+    (dolist (mode-pair gp/evil-lookup-modes-list)
+      (add-hook (car mode-pair) (cdr mode-pair))))
+#+end_src
 ** General
 [[https://github.com/noctuid/general.el?tab=readme-ov-file][General.el]] is a powerful package for defining keybinds. It provides
 several convenient shortcuts for declaring keybinds, macros, and

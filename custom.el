@@ -5,7 +5,10 @@
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    '("80214de566132bf2c844b9dee3ec0599f65c5a1f2d6ff21a2c8309e6e70f9242" default))
- '(safe-local-variable-values '((electric-pair-mode)))
+ '(safe-local-variable-values
+   '((evil-lookup-func . helpful-at-point)
+     (evil-lookup-func quote helpful-at-point)
+     (electric-pair-mode)))
  '(smtpmail-smtp-server "smtp.gmail.com")
  '(smtpmail-smtp-service 25))
 (custom-set-faces

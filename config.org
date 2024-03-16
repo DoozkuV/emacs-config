@@ -51,6 +51,12 @@ Enables file history.
 #+begin_src emacs-lisp
   (recentf-mode 1) ; Enable file history
 #+end_src
+
+For some reason, the regexp for the ending of a sentence isn't set by
+default. We define it here.
+#+begin_src emacs-lisp
+(setq sentence-end "[.?!] ")
+#+end_src
 ** Global Variables and Utilities 
 
 Simple variables for the names of my laptop and desktop computers
@@ -596,6 +602,17 @@ completions.
     (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 #+end_src
 
+We also want to be able to use Corfu in the minibuffer, for modes that
+allow it like =eval= or =shell-command=.
+#+begin_src emacs-lisp
+(defun corfu-enable-in-minibuffer ()
+  "Enable Corfu in the minibuffer."
+  (when (local-variable-p 'completion-at-point-functions)
+    (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
+                corfu-popupinfo-delay nil)
+    (corfu-mode 1)))
+(add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
+#+end_src
 In order to keep Corfu working in the terminal, we enable the
 following mode only in terminals
 #+begin_src emacs-lisp
@@ -604,6 +621,7 @@ following mode only in terminals
     :config (corfu-terminal-mode 1))
 #+end_src
 
+*** Cape
 We might also want to look into [[https://github.com/minad/cape][Cape]], which adds some more advanced
 customization options
 
@@ -642,7 +660,7 @@ customization options
     ;;(add-to-list 'completion-at-point-functions #'cape-sgml)
     ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345)
     ;;(add-to-list 'completion-at-point-functions #'cape-abbrev)
-    (add-to-list 'completion-at-point-functions #'cape-dict)
+    ;; (add-to-list 'completion-at-point-functions #'cape-dict)
     ;;(add-to-list 'completion-at-point-functions #'cape-elisp-symbol)
     ;;(add-to-list 'completion-at-point-functions #'cape-line)
   )
@@ -770,6 +788,22 @@ Github page.
   )
 #+end_src
 * Programming
+** Tree-sitter
+A powerful and fast library for parsing text in Emacs. Tree-sitter in
+Emacs is implemented in the form of separate per-language modes that
+should be activated over-top of the actual modes. Therefore, we use
+=major-mode-remap-alist= to remap the old modes with the new ones.
+#+begin_src emacs-lisp
+  (setq major-mode-remap-alist
+	'((css-mode . css-ts-mode)
+	  (javascript-mode . js-ts-mode)
+	  (c-mode . c-ts-mode)
+	  (c++-mode . c++-ts-mode)
+	  (python-mode . python-ts-mode)))
+#+end_src
+
+In order to enable more advanced highlighting, we will enable the
+following set
 ** Lisp Editing
 [[https://github.com/emacs-evil/evil-cleverparens][Evil Cleverparens]] makes evil work nicer when editing lisp code.
 #+begin_src emacs-lisp
@@ -790,7 +824,18 @@ Major mode for editing Racket code
       "rp" '(racket-run-module-at-point :which-key "Run Module at
     Point")))
 #+end_src
-
+** Misc Major Modes
+*** Markdown Mode
+Enables nice rendering of markdown modes. Has a separate mode set for
+/Github flavored markdown/, called =gfm-mode=. 
+#+begin_src emacs-lisp
+(use-package markdown-mode
+  :ensure t
+  :mode ("README\\.md\\'" . gfm-mode)
+  :init (setq markdown-command "multimarkdown")
+  :bind (:map markdown-mode-map
+         ("C-c C-e" . markdown-do)))
+#+end_src
 * Projectile
 [[https://github.com/bbatsov/projectile][Projectile]] is a power package for managing projects, and in my opinion
 is superior to the default =package.el= that is built-in to
@@ -878,7 +923,7 @@ of Dired
      :states 'normal
      :keymaps 'org-mode-map
      "RET" 'org-open-at-point)
-  
+
     :config
     ;; Make it so org mode always starts folded
     (setq org-startup-folded 'showeverything)
@@ -942,6 +987,7 @@ of Dired
     (require 'ox-md nil t)
     ;; Enable tempo in org mode
     (require 'org-tempo)
+    ;; Create babel tangle presets 
     (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
     (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
     (add-to-list 'org-structure-template-alist '("py" . "src python"))

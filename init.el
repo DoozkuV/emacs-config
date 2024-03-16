@@ -1,4 +1,4 @@
-(setq gc-cons-threshhold (* 50 1000 1000))
+(setq gc-cons-threshold (* 50 1000 1000))
 
 (setq native-comp-async-report-warnings-errors 'silent)
 
@@ -10,6 +10,8 @@
 (setq global-auto-revert-non-file-buffers t) ; Revert Dired and other buffers
 
 (recentf-mode 1) ; Enable file history
+
+(setq sentence-end "[.?!] ")
 
 (defvar gp/is-laptop nil
   "Whether the config is on the laptop")
@@ -194,6 +196,23 @@ If the file does not exist, it will be created at the specified directory."
   :config
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
+
+;;; Set up variables for the function
+(defvar gp/evil-lookup-modes-list
+  '((lsp-mode-hook . lsp-describe-thing-at-point)
+    (sh-mode-hook . gp/man-at-point)
+    (org-mode-hook . gp/dict-at-point))
+  "A list containing mode hooks and corresponding functions to be
+  called by 'evil-lookup-func' within those modes.")
+
+(defvar gp/evil-lookup-func-default 'helpful-at-point
+  "The default function to be called by 'evil-lookup-func'")
+
+(defun gp/setup-evil-lookup-modes ()
+  "Sets up the evil lookup mode hooks" 
+  (setq evil-lookup-func gp/evil-lookup-func-default)
+  (dolist (mode-pair gp/evil-lookup-modes-list)
+    (add-hook (car mode-pair) (cdr mode-pair))))
 
 (use-package general
   :config
@@ -387,6 +406,14 @@ If the file does not exist, it will be created at the specified directory."
   (corfu-popupinfo-mode)
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
+(defun corfu-enable-in-minibuffer ()
+  "Enable Corfu in the minibuffer."
+  (when (local-variable-p 'completion-at-point-functions)
+    (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
+                corfu-popupinfo-delay nil)
+    (corfu-mode 1)))
+(add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
+
 (use-package corfu-terminal 
   :if (not (display-graphic-p))
   :config (corfu-terminal-mode 1))
@@ -425,7 +452,7 @@ If the file does not exist, it will be created at the specified directory."
   ;;(add-to-list 'completion-at-point-functions #'cape-sgml)
   ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345)
   ;;(add-to-list 'completion-at-point-functions #'cape-abbrev)
-  (add-to-list 'completion-at-point-functions #'cape-dict)
+  ;; (add-to-list 'completion-at-point-functions #'cape-dict)
   ;;(add-to-list 'completion-at-point-functions #'cape-elisp-symbol)
   ;;(add-to-list 'completion-at-point-functions #'cape-line)
 )
@@ -545,6 +572,13 @@ If the file does not exist, it will be created at the specified directory."
   ;; (setq consult-project-function nil)
 )
 
+(setq major-mode-remap-alist
+      '((css-mode . css-ts-mode)
+	(javascript-mode . js-ts-mode)
+	(c-mode . c-ts-mode)
+	(c++-mode . c++-ts-mode)
+	(python-mode . python-ts-mode)))
+
 (use-package evil-cleverparens
   :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
 
@@ -558,6 +592,13 @@ If the file does not exist, it will be created at the specified directory."
     "rr" '(racket-run-and-switch-to-repl :which-key "Run and Switch to REPL")
     "rp" '(racket-run-module-at-point :which-key "Run Module at
   Point")))
+
+(use-package markdown-mode
+  :ensure t
+  :mode ("README\\.md\\'" . gfm-mode)
+  :init (setq markdown-command "multimarkdown")
+  :bind (:map markdown-mode-map
+         ("C-c C-e" . markdown-do)))
 
 (use-package projectile
   :diminish projectile-mode
@@ -689,6 +730,7 @@ If the file does not exist, it will be created at the specified directory."
   (require 'ox-md nil t)
   ;; Enable tempo in org mode
   (require 'org-tempo)
+  ;; Create babel tangle presets 
   (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
   (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
   (add-to-list 'org-structure-template-alist '("py" . "src python"))
@@ -1073,4 +1115,4 @@ If programs is nil, it will act as if nothing is there."
 		  (smtpmail-mail-address . "george.n.padron@vanderbilt.edu")
 		  (smtpmail-smtp-user . "george.n.padron@vanderbilt.edu"))))))
 
-(setq gc-cons-threshhold (* 2 1000 1000))
+(setq gc-cons-threshold (* 2 1000 1000))

@@ -17,7 +17,7 @@ garbage collection threshold, we make it so we can load our
 configuration quicker. We will [[Reset Garbage Collection]] at the end of
 the configuration. 
 #+begin_src emacs-lisp
-  (setq gc-cons-threshhold (* 50 1000 1000))
+  (setq gc-cons-threshold (* 50 1000 1000))
 #+end_src
 ** Basic Settings
 Here are some basic utility settings we want enabled in this
@@ -1437,7 +1437,7 @@ configuration here is not designed to work with =mutt-wizard=.
 Here we dial back the garbage collection so that it happens at a more
 reasonable time.
 #+begin_src emacs-lisp
-(setq gc-cons-threshhold (* 2 1000 1000))
+(setq gc-cons-threshold (* 2 1000 1000))
 #+end_src
 
 # Local Variables:

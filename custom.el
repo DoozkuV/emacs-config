@@ -6,7 +6,11 @@
  '(custom-safe-themes
    '("80214de566132bf2c844b9dee3ec0599f65c5a1f2d6ff21a2c8309e6e70f9242" default))
  '(safe-local-variable-values
-   '((jinx-local-words . "Dired Docview Flyspell Keybinds Modeline Nuspell Vterm dired")
+   '((etags-regen-ignores "test/manual/etags/")
+     (etags-regen-regexp-alist
+      (("c" "objc")
+       "/[ \11]*DEFVAR_[A-Z_ \11(]+\"\\([^\"]+\\)\"/\\1/" "/[ \11]*DEFVAR_[A-Z_ \11(]+\"[^\"]+\",[ \11]\\([A-Za-z0-9_]+\\)/\\1/"))
+     (jinx-local-words . "Dired Docview Flyspell Keybinds Modeline Nuspell Vterm dired")
      (evil-lookup-func . helpful-at-point)
      (evil-lookup-func quote helpful-at-point)
      (electric-pair-mode)))

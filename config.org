@@ -288,6 +288,17 @@ If you don't want to install the package with Elpaca, add
 built-in Emacs packages or stuff like [[mu4e]]. 
 
 More information about Elpaca can be seen on [[https://www.youtube.com/watch?v=5Ud-TE3iIQY][this video]]. 
+* Optimization
+Here we use a package called [[https://github.com/emacsmirror/gcmh?tab=readme-ov-file][GCMH]] that optimizes the garbage collector
+to only run when the user is idle - thus making Emacs feel faster.
+
+*WARNING*: If this is used in a system that is under severe memory
+ pressure, then the =gcmh-high-cons-threshold= might be set too high,
+ which can lead to problems. 
+#+begin_src emacs-lisp
+  (use-package gcmh
+    :init (gcmh-mode 1))
+#+end_src
 * Keybinds
 ** Evil 
 Evil is the main package for providing Vim emulation from within
@@ -1203,6 +1214,11 @@ buffer in an fast and efficient manner. It relies on a back-end like
 		("M-$" . jinx-correct)
 		("C-M-$" . jinx-languages)))
 #+end_src
+** Powerthesaurus
+Enables useful thesaurus functionality in writing sessions
+#+begin_src emacs-lisp
+  (use-package powerthesaurus)
+#+end_src
 ** Pass
 A simple wrapper over the =pass= application.
 #+begin_src emacs-lisp
@@ -1500,8 +1516,9 @@ configuration here is not designed to work with =mutt-wizard=.
 *WARNING*: THIS SHOULD ALWAYS BE AT THE END OF THE CONFIG!
 
 Here we dial back the garbage collection so that it happens at a more
-reasonable time.
-#+begin_src emacs-lisp
+reasonable time. Actually, we have *disabled* this for now, as we are
+using the [[Optimization][GCMH]] package to manage garbage collection.
+#+begin_src emacs-lisp  :tangle nil
 (setq gc-cons-threshold (* 2 1000 1000))
 #+end_src
 

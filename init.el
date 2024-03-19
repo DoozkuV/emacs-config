@@ -165,6 +165,9 @@ If the file does not exist, it will be created at the specified directory."
 
 (elpaca-wait)
 
+(use-package gcmh
+  :init (gcmh-mode 1))
+
 (use-package evil
   :demand t ;; Prevent lazy loading
   :bind (("<escape>" . keyboard-escape-quit))
@@ -882,6 +885,8 @@ If the file does not exist, it will be created at the specified directory."
 	      ("M-$" . jinx-correct)
 	      ("C-M-$" . jinx-languages)))
 
+(use-package powerthesaurus)
+
 (use-package password-store
   :defer)
 
@@ -1124,5 +1129,3 @@ If programs is nil, it will act as if nothing is there."
 					   ("/george.n.padron@vanderbilt.edu/[Gmail]/All Mail" . ?a)))
 		  (smtpmail-mail-address . "george.n.padron@vanderbilt.edu")
 		  (smtpmail-smtp-user . "george.n.padron@vanderbilt.edu"))))))
-
-(setq gc-cons-threshold (* 2 1000 1000))

@@ -295,7 +295,7 @@ If the file does not exist, it will be created at the specified directory."
     "or" '(gts-do-translate :which-key "Open Translator")
     "oe" '(eshell :which-key "Open Eshell")
     "oE" '(eshell-other-window :which-key "Open Eshell")
-    "op" '(treemacs :which-key "Open File-Tree")
+    ;; "op" '(treemacs :which-key "Open File-Tree") ; No file tree for now
     "om" '(mu4e :which-key "Open Mail")
     "ob" '(eww :which-key "Open Browser")
     ;; "j" '((lambda () (interactive) (org-capture nil "jj")) :which-key "Capture Journal")
@@ -885,7 +885,10 @@ If the file does not exist, it will be created at the specified directory."
 	      ("M-$" . jinx-correct)
 	      ("C-M-$" . jinx-languages)))
 
-(use-package powerthesaurus)
+(use-package powerthesaurus
+  :general
+  (gp/leader-keys
+    "op" '(powerthesaurus-transient :which-key "Open Powerthesaurus"))
 
 (use-package password-store
   :defer)

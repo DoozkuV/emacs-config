@@ -454,7 +454,7 @@ of this configuration.
       "or" '(gts-do-translate :which-key "Open Translator")
       "oe" '(eshell :which-key "Open Eshell")
       "oE" '(eshell-other-window :which-key "Open Eshell")
-      "op" '(treemacs :which-key "Open File-Tree")
+      ;; "op" '(treemacs :which-key "Open File-Tree") ; No file tree for now
       "om" '(mu4e :which-key "Open Mail")
       "ob" '(eww :which-key "Open Browser")
       ;; "j" '((lambda () (interactive) (org-capture nil "jj")) :which-key "Capture Journal")
@@ -1217,7 +1217,10 @@ buffer in an fast and efficient manner. It relies on a back-end like
 ** Powerthesaurus
 Enables useful thesaurus functionality in writing sessions
 #+begin_src emacs-lisp
-  (use-package powerthesaurus)
+	(use-package powerthesaurus
+	  :general
+	  (gp/leader-keys
+	    "op" '(powerthesaurus-transient :which-key "Open Powerthesaurus"))
 #+end_src
 ** Pass
 A simple wrapper over the =pass= application.

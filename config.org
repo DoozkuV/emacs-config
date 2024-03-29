@@ -1,11 +1,10 @@
-# -*- electric-pair-mode: nil; evil-lookup-func: helpful-at-point -*-
-#+title: Modern Emacs Configuration
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
 #+STARTUP: overview
 
 * TODO Packages to Add and Performance Hogs
 - Add LSP Programming support
 - Improve support for org-roam and other org functionality
+- Modify Corfu completion to make it better 
 
   
 * Initial Setup
@@ -548,6 +547,12 @@ of this configuration.
   (setq which-key-idle-delay 0.25))
 
  #+end_src
+** Mode-Specific Stuff
+[[https://github.com/emacs-evil/evil-cleverparens][Evil Cleverparens]] makes evil work nicer when editing lisp code.
+#+begin_src emacs-lisp
+  (use-package evil-cleverparens
+    :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
+#+end_src
 * Completion
 ** Vertico
 [[https://github.com/minad/vertico][Vertico]] is a powerful, extensible, and minimalist minibuffer
@@ -835,11 +840,6 @@ should be activated over-top of the actual modes. Therefore, we use
 In order to enable more advanced highlighting, we will enable the
 following set
 ** Lisp Editing
-[[https://github.com/emacs-evil/evil-cleverparens][Evil Cleverparens]] makes evil work nicer when editing lisp code.
-#+begin_src emacs-lisp
-  (use-package evil-cleverparens
-    :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
-#+end_src
 *** Racket
 Major mode for editing Racket code
 #+begin_src emacs-lisp
@@ -1033,7 +1033,6 @@ executed for every single change in the config.
   (defun gp/org-babel-tangle-config ()
     (when (string-equal (buffer-file-name)
 			(gp/config-path-file-expand "config.org"))
-      ;; Dynamic Scoping
       (let ((org-confirm-babel-evaluate nil))
 	(org-babel-tangle))))
 
@@ -1220,7 +1219,7 @@ Enables useful thesaurus functionality in writing sessions
 	(use-package powerthesaurus
 	  :general
 	  (gp/leader-keys
-	    "op" '(powerthesaurus-transient :which-key "Open Powerthesaurus"))
+	    "op" '(powerthesaurus-transient :which-key "Open Powerthesaurus")))
 #+end_src
 ** Pass
 A simple wrapper over the =pass= application.

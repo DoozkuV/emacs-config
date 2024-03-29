@@ -362,6 +362,9 @@ If the file does not exist, it will be created at the specified directory."
   :config
   (setq which-key-idle-delay 0.25))
 
+(use-package evil-cleverparens
+  :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
+
 (use-package vertico
   :diminish
   :bind (:map vertico-map ; Neat vimlike binds
@@ -592,9 +595,6 @@ If the file does not exist, it will be created at the specified directory."
 	(c++-mode . c++-ts-mode)
 	(python-mode . python-ts-mode)))
 
-(use-package evil-cleverparens
-  :hook ((racket-mode emacs-lisp-mode) . evil-cleverparens-mode))
-
 (use-package racket-mode
   :ensure (:source "MELPA")
   :general
@@ -753,7 +753,6 @@ If the file does not exist, it will be created at the specified directory."
 (defun gp/org-babel-tangle-config ()
   (when (string-equal (buffer-file-name)
 		      (gp/config-path-file-expand "config.org"))
-    ;; Dynamic Scoping
     (let ((org-confirm-babel-evaluate nil))
       (org-babel-tangle))))
 
@@ -888,7 +887,7 @@ If the file does not exist, it will be created at the specified directory."
 (use-package powerthesaurus
   :general
   (gp/leader-keys
-    "op" '(powerthesaurus-transient :which-key "Open Powerthesaurus"))
+    "op" '(powerthesaurus-transient :which-key "Open Powerthesaurus")))
 
 (use-package password-store
   :defer)

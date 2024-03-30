@@ -1110,7 +1110,9 @@ display the text.
 	org-roam-ui-update-on-save t
 	org-roam-ui-open-on-start t))
 #+end_src
-** Org Images
+** Org Utilities
+*** Images
+**** Org Download
 [[https://github.com/abo-abo/org-download][org-download]] is a utility for dragging and dropping images into
 Emacs. It includes features for dragging and dropping from browsers to
 Emacs - dragging from file system into Emacs - and putting taken
@@ -1119,6 +1121,17 @@ screenshots into Emacs.
   (use-package org-download
     :after org
     :hook (dired-mode . org-download-enable))
+#+end_src
+**** Org Excalidraw
+[[https://github.com/wdavew/org-excalidraw?tab=readme-ov-file][org-excalidraw]] allows one to draw images utilizing [[https://excalidraw.com][excalidraw]] and have
+them be inserted and displayed inline through Emacs.
+#+begin_src emacs-lisp
+  (use-package org-excalidraw
+    :ensure (:host github :repo "wdavew/org-excalidraw")
+    :preface
+    (setq org-excalidraw-directory (concat gp/org-directory "/excalidraw"))
+    :if (f-dir-p (expand-file-name org-excalidraw-directory))
+    :after org)
 #+end_src
 * Git
 We use [[https://magit.vc/][Magit]] to manage git in this configuration, as it is easily the
@@ -1164,12 +1177,16 @@ entirely in Elisp.
       "c" '(eat-char-mode :which-key "Char Mode")))
 #+end_src
 ** Eshell
+Here we configure eshell and set up some basic configuration options
+for it. Keep in mind eshell works kind of weird with certain
+configuration settings so one has to call a function on the
+`eshell-first-time-mode' hook in order to properly configure it.
 #+begin_src emacs-lisp
-  ;; (defun gp/configure-eshell ()
-  ;;   (setq eshell-history-size 10000
-  ;; 	eshell-buffer-maximum-lines 10000
-  ;; 	eshell-hist-ignoredups t
-  ;; 	eshell-scroll-to-bottom-on-input t))
+  (defun gp/configure-eshell ()
+    (setq eshell-history-size 10000
+	  eshell-buffer-maximum-lines 10000
+	  eshell-hist-ignoredups t
+	  eshell-scroll-to-bottom-on-input t))
 
   (defun eshell-other-window ()
     "Open `eshell' in a new window."
@@ -1180,7 +1197,7 @@ entirely in Elisp.
   ;; Eshell
   (use-package eshell
     :ensure nil
-    ;; :hook (eshell-first-time-mode . gp/configure-eshell)
+    :hook (eshell-first-time-mode . gp/configure-eshell)
     :bind
     ("C-c o e" . eshell)
     ("C-x 4 e" . eshell-other-window))
@@ -1243,6 +1260,29 @@ A simple wrapper over the =pass= application.
       (use-package pdf-tools
         :init
         (pdf-loader-install))
+#+end_src
+** Speed Type
+A fun typing game to play in Emacs
+#+begin_src emacs-lisp
+  (use-package speed-type
+    :commands (speed-type-text
+	       speed-type-top-x
+	       speed-type-buffer
+	       speed-type-region
+	       speed-type-top-100)
+    :config
+    (add-hook 'speed-type-mode-hook (lambda () (setq-local evil-default-state 'insert))))
+#+end_src
+** Dashboard
+A nice dashboard for starting up Emacs
+#+begin_src emacs-lisp
+(use-package dashboard
+  :config
+  (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
+  (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
+  (dashboard-setup-startup-hook)
+  (setq initial-buffer-choice (lambda () (get-buffer-create dashboard-buffer-name)))
+  (setq dashboard-startup-banner 'logo))
 #+end_src
 * Arch Package Management
 TODO: Update this section and make it into it's own repository. 

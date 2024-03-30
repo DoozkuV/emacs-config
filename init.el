@@ -820,6 +820,13 @@ If the file does not exist, it will be created at the specified directory."
   :after org
   :hook (dired-mode . org-download-enable))
 
+(use-package org-excalidraw
+  :ensure (:host github :repo "wdavew/org-excalidraw")
+  :preface
+  (setq org-excalidraw-directory (concat gp/org-directory "/excalidraw"))
+  :if (f-dir-p (expand-file-name org-excalidraw-directory))
+  :after org)
+
 (use-package transient) ;; Fix a weird bug with elpaca
 (use-package magit
   :commands (magit-status magit-dispatch magit-file-dispatch)
@@ -841,11 +848,11 @@ If the file does not exist, it will be created at the specified directory."
     "p" '(eat-previous-shell-prompt :which-key "Previous Prompt")
     "c" '(eat-char-mode :which-key "Char Mode")))
 
-;; (defun gp/configure-eshell ()
-;;   (setq eshell-history-size 10000
-;; 	eshell-buffer-maximum-lines 10000
-;; 	eshell-hist-ignoredups t
-;; 	eshell-scroll-to-bottom-on-input t))
+(defun gp/configure-eshell ()
+  (setq eshell-history-size 10000
+	eshell-buffer-maximum-lines 10000
+	eshell-hist-ignoredups t
+	eshell-scroll-to-bottom-on-input t))
 
 (defun eshell-other-window ()
   "Open `eshell' in a new window."
@@ -856,7 +863,7 @@ If the file does not exist, it will be created at the specified directory."
 ;; Eshell
 (use-package eshell
   :ensure nil
-  ;; :hook (eshell-first-time-mode . gp/configure-eshell)
+  :hook (eshell-first-time-mode . gp/configure-eshell)
   :bind
   ("C-c o e" . eshell)
   ("C-x 4 e" . eshell-other-window))
@@ -899,6 +906,23 @@ If the file does not exist, it will be created at the specified directory."
 (use-package pdf-tools
   :init
   (pdf-loader-install))
+
+(use-package speed-type
+  :commands (speed-type-text
+	     speed-type-top-x
+	     speed-type-buffer
+	     speed-type-region
+	     speed-type-top-100)
+  :config
+  (add-hook 'speed-type-mode-hook (lambda () (setq-local evil-default-state 'insert))))
+
+(use-package dashboard
+  :config
+  (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
+  (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
+  (dashboard-setup-startup-hook)
+  (setq initial-buffer-choice (lambda () (get-buffer-create dashboard-buffer-name)))
+  (setq dashboard-startup-banner 'logo))
 
 ;;; UTILITY FUNCTIONS FOR DEALING WITH ARCH/PACMAN
 

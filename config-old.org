@@ -422,7 +422,9 @@ This package sets up some nice and simple highlighting around certain evil actio
   ;;   (evil-goggles-use-diff-faces))
 #+end_src
 *** Hydra
-The Hydra package allows me to create special keybinds that can be linked together like a hydra. The following sets up an example where a command is made that allows one to easily scale up or down font size.
+The Hydra package allows me to create special key-binds that can be
+linked together like a hydra. The following sets up an example where a
+command is made that allows one to easily scale up or down font size.
 #+begin_src emacs-lisp
 (use-package hydra)
 

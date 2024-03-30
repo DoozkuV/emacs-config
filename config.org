@@ -1110,6 +1110,16 @@ display the text.
 	org-roam-ui-update-on-save t
 	org-roam-ui-open-on-start t))
 #+end_src
+** Org Images
+[[https://github.com/abo-abo/org-download][org-download]] is a utility for dragging and dropping images into
+Emacs. It includes features for dragging and dropping from browsers to
+Emacs - dragging from file system into Emacs - and putting taken
+screenshots into Emacs.
+#+begin_src emacs-lisp
+  (use-package org-download
+    :after org
+    :hook (dired-mode . org-download-enable))
+#+end_src
 * Git
 We use [[https://magit.vc/][Magit]] to manage git in this configuration, as it is easily the
 best Git implementation currently available.
@@ -1514,6 +1524,22 @@ configuration here is not designed to work with =mutt-wizard=.
 		    (smtpmail-smtp-user . "george.n.padron@vanderbilt.edu"))))))
 
 #+end_src
+
+On top of this configuration, we bring in a package known as
+[[https://github.com/jeremy-compostella/org-msg][org-msg]]. This is allows you to write and respond to HTML emails in org
+mode, and have them be automatically converted to HTML when sent. Here
+we do some configuration to set this all up.
+#+begin_src emacs-lisp
+  (use-package org-msg
+    :after mu4e
+    :init
+    ;; First we set the default mail agent to mu4e
+    (setq mail-user-agent 'mu4e-user-agent)
+    ;; Now, we set some default options
+    (setq org-msg-options
+	  "html-postamble:nil H:5 num:nil ^:{} toc:nil author:nil email:nil"))
+
+#+end_src 
 * Reset Garbage Collection 
 *WARNING*: THIS SHOULD ALWAYS BE AT THE END OF THE CONFIG!
 

@@ -816,6 +816,10 @@ If the file does not exist, it will be created at the specified directory."
 	org-roam-ui-update-on-save t
 	org-roam-ui-open-on-start t))
 
+(use-package org-download
+  :after org
+  :hook (dired-mode . org-download-enable))
+
 (use-package transient) ;; Fix a weird bug with elpaca
 (use-package magit
   :commands (magit-status magit-dispatch magit-file-dispatch)
@@ -1131,3 +1135,12 @@ If programs is nil, it will act as if nothing is there."
 					   ("/george.n.padron@vanderbilt.edu/[Gmail]/All Mail" . ?a)))
 		  (smtpmail-mail-address . "george.n.padron@vanderbilt.edu")
 		  (smtpmail-smtp-user . "george.n.padron@vanderbilt.edu"))))))
+
+(use-package org-msg
+  :after mu4e
+  :init
+  ;; First we set the default mail agent to mu4e
+  (setq mail-user-agent 'mu4e-user-agent)
+  ;; Now, we set some default options
+  (setq org-msg-options
+	"html-postamble:nil H:5 num:nil ^:{} toc:nil author:nil email:nil"))

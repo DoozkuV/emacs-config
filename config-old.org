@@ -764,8 +764,7 @@ The [[https://github.com/emacs-dashboard/emacs-dashboard][Dashboard]] package cr
     ;; Setup what appears on the dashboard
     (setq dashboard-items '((projects . 10)
                             (recents . 10)
-                            (agenda . 5)
-                            ))
+                            (agenda . 5)))
     ;; Set up widget icons upon startup
     (setq dashboard-icon-type 'nerd-icons
           dashboard-set-heading-icons t
@@ -1680,3 +1679,7 @@ This should be at the very end of the config. Here, we dial back the GC threshol
 #+begin_src emacs-lisp
   (setq gc-cons-threshold (* 2 1000 1000))
 #+end_src
+
+# Local Variables:
+# evil-lookup-func: helpful-at-point
+# End:

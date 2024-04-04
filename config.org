@@ -379,6 +379,14 @@ For text buffers, the =dict-at-point= function is created.
   (interactive)
   (dictionary-search (word-at-point)))
 #+end_src
+
+For shell scripts, the =man-at-point= function is made, which is self-explanatory
+#+begin_src emacs-lisp
+(defun gp/man-at-point ()
+"Runs the `man' command on the word at point"
+    (interactive)
+    (man (word-at-point)))
+#+end_src
 ** General
 [[https://github.com/noctuid/general.el?tab=readme-ov-file][General.el]] is a powerful package for defining keybinds. It provides
 several convenient shortcuts for declaring keybinds, macros, and
@@ -399,6 +407,7 @@ of this configuration.
       :non-normal-prefix "C-SPC m")
 
     (gp/leader-keys
+      "u" '(universal-argument :which-key "universal arg")
       ;; Toggles
       "t" '(:ignore t :which-key "toggles")
       "ta" '(auto-fill-mode :which-key "Toggle auto fill")
@@ -407,6 +416,7 @@ of this configuration.
       "tp" '(electric-pair-mode :which-key "Toggle electric pairs")
       "to" '(gp/opacity-mode :which-key "Toggle opacity")
       "tf" '(flyspell-mode :which-key "Toggle flyspell mode")
+      "tj" '(jinx-mode :which-key "Toggle jinx mode")
       "tF" '(flyspell-prog-mode :which-key "Toggle flyspell prog mode")
 
       ;; Window Management
@@ -839,6 +849,8 @@ should be activated over-top of the actual modes. Therefore, we use
 
 In order to enable more advanced highlighting, we will enable the
 following set
+** TODO LSP 
+
 ** Lisp Editing
 *** Racket
 Major mode for editing Racket code
@@ -858,13 +870,31 @@ Major mode for editing Racket code
 *** Markdown Mode
 Enables nice rendering of markdown modes. Has a separate mode set for
 /Github flavored markdown/, called =gfm-mode=. 
+
+We will also write a custom function called =gp/markdown-preview-eww=
+that will allow us to compile markdown into html and render it using
+=eww=. Very useful!
 #+begin_src emacs-lisp
-(use-package markdown-mode
-  :ensure t
-  :mode ("README\\.md\\'" . gfm-mode)
-  :init (setq markdown-command "multimarkdown")
-  :bind (:map markdown-mode-map
-         ("C-c C-e" . markdown-do)))
+  (defun gp/markdown-preview-eww ()
+    "Generates a preview of the currently open markdown file in eww"
+    (interactive)
+    (shr-render-buffer (markdown)))
+
+  (use-package markdown-mode
+    :ensure t
+    :mode ("README\\.md\\'" . gfm-mode)
+    :init (setq markdown-command "multimarkdown")
+    :bind (:map markdown-mode-map
+		("C-c C-e" . markdown-do))
+    :general
+    (gp/local-leader-keys
+      :keymaps 'markdown-mode-map
+      "r" '(gp/markdown-preview-eww :which-key "Preview in Eww")))
+#+end_src
+*** Prolog - Sweep
+[[https://github.com/SWI-Prolog/packages-sweep][SWI-Sweep]] is a package designed for editing in *prolog*.
+#+begin_src emacs-lisp
+(use-package sweeprolog)
 #+end_src
 * Projectile
 [[https://github.com/bbatsov/projectile][Projectile]] is a power package for managing projects, and in my opinion
@@ -1125,7 +1155,9 @@ screenshots into Emacs.
 **** Org Excalidraw
 [[https://github.com/wdavew/org-excalidraw?tab=readme-ov-file][org-excalidraw]] allows one to draw images utilizing [[https://excalidraw.com][excalidraw]] and have
 them be inserted and displayed inline through Emacs.
-#+begin_src emacs-lisp
+
+Right now, this doesn't seem to be working, so we set tangle to =nil= 
+#+begin_src emacs-lisp :tangle nil
   (use-package org-excalidraw
     :ensure (:host github :repo "wdavew/org-excalidraw")
     :preface
@@ -1163,7 +1195,7 @@ For now, we will be testing eat over this package.
   (setq vterm-max-scrollback 10000))
 #+end_src
 ** EAT
-[[https://codeberg.org/akib/emacs-eat][Eat]] is another emacs terminal emulator like [[Vterm]], but it is built
+[[https://codeberg.org/akib/emacs-eat][Eat]] is another Emacs terminal emulator like [[Vterm]], but it is built
 entirely in Elisp. 
 #+begin_src emacs-lisp
   (use-package eat
@@ -1274,18 +1306,119 @@ A fun typing game to play in Emacs
     (add-hook 'speed-type-mode-hook (lambda () (setq-local evil-default-state 'insert))))
 #+end_src
 ** Dashboard
-A nice dashboard for starting up Emacs
+[[https://github.com/emacs-dashboard/emacs-dashboard][emacs-dashboard]] is project that enables a nice dashboard for
+Emacs. You can set it to list recent files, bookmarks, projects,
+org-mode-agenda stuff, registers, and more! It also supports icons
+from the =nerd-icons= package.
+
+For now, I am using this as my dashboard, although I might want to
+consider taking a page out of my Obsidian config and utilizing [[Org
+Roam]]'s daily note feature.
+
+In order to render some nice line breaks, we bring in the package
+[[https://github.com/purcell/page-break-lines][page-break-lines]]. 
 #+begin_src emacs-lisp
-(use-package dashboard
-  :config
-  (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
-  (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
-  (dashboard-setup-startup-hook)
-  (setq initial-buffer-choice (lambda () (get-buffer-create dashboard-buffer-name)))
-  (setq dashboard-startup-banner 'logo))
+  ;; page-break-lines to start on dashboard mode
+  (use-package page-break-lines
+    :hook (dashboard-mode . page-break-lines-mode))
+
+  ;; Dashboard configuration
+  (use-package dashboard
+    :init
+    ;; Set what appears on the dashboard
+    (setq dashboard-items '((projects . 10)
+			    (recents . 10)
+			    (agenda . 5)))
+    ;; Make sure that projectile is used for projects
+    (setq dashboard-projects-backend 'projectile)
+    ;; Set it to use the weekly agenda
+    (setq dashboard-week-agenda t)
+
+    ;; Enable dashboard icons
+    (setq dashboard-set-heading-icons t
+	  dashboard-icon-type 'nerd-icons
+	  dashboard-set-file-icons t)
+    ;; Set a nicer default logo
+    (setq dashboard-startup-banner 'logo)
+    ;; (setq dashboard-startup-banner 
+    ;; 	  (gp/config-path-file-expand "logos/black-hole.png"))
+    ;; More dashboard info
+    (setq dashboard-set-init-info t)
+    (setq dashboard-set-footer t)
+
+    ;; Utilize the page separator package
+    (setq dashboard-page-separator "\n\n")
+    ;; Initial buffer choice
+    (setq initial-buffer-choice (lambda () (dashboard-open)))
+    :config
+    ;; Elpaca setup
+    (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
+    (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
+    (dashboard-setup-startup-hook))
+      #+end_src
+** Configuration Testing
+Here is a basic elisp function that runs a new instance of Emacs with
+the specified configuration directory. 
+#+begin_src emacs-lisp
+  (defun gp/test-config (config-path)
+    "Creates an emacs instance and loads the configuration at the specified path"
+    (interactive "DChoose a config path: ")
+    (let ((config-path (expand-file-name config-path)))
+      (unless (f-directory-p config-path)
+	(error "Invalid directory entered"))
+      (start-process
+       "Emacs-Test-Config" nil
+       "emacs" "--init-directory"
+       config-path
+       "--debug-init")))
+#+end_src
+* AI and LLM Integration
+In order to easily run and manage LLMs running on the system through
+Emacs, we bring in the package known as [[https://github.com/karthink/gptel][gptel]]. This package provides
+functionality that allows one to interact with an LLM through a
+Markdown or Org-mode buffer. It also provides one with the ability to
+refactor highlighted text, code, or prose utilizing the AI. 
+
+For this configuration, gptel is configured to work with [[https://ollama.com/][Ollama]], a
+powerful LLM manager that allows one to run LLMs locally on the
+system. It can also be configured to work with other LLMs, like
+Chatgpt or gpt4all. More information is on the [[https://github.com/karthink/gptel][Github]]. 
+
+#+begin_src emacs-lisp
+  (use-package gptel
+    :preface
+    ;; Define utility functions for the config
+    (defun gp/get-ollama-installed-models ()
+      "Uses awk to get a list of installed ollama models."
+      (split-string (shell-command-to-string
+		     "ollama list | awk 'NR>1 {print $1}'")))
+    :commands (gptel gptel-menu gptel-mode gptel-send gptel-set-topic)
+    :general
+    (gp/leader-keys
+      "l" '(:ignore t :which-key "llm")
+      "ls" '(gptel-send :which-key "Send point to LLM")
+      ;;  Calls gptel-send with the universal arg enabled
+      "lS" '((lambda () (interactive)
+	      (let ((current-prefix-arg 4))
+		(call-interactively 'gptel-send)))
+	    :which-key "Transient send point to LLM")
+      "lb" '(gptel :which-key "Start Chat")
+      ;; :keymaps 'org-mode-map
+      "lt" '(gptel-set-topic :which-key "Set context to Org Heading"))
+    :config
+    (setq
+     gptel-model "mistral:latest"
+     gptel-backend (gptel-make-ollama "Ollama"
+				      :host "localhost:11434"
+				      :stream t
+				      :models (gp/get-ollama-installed-models)))
+    ;; Set gptel buffers to use org mode
+    (setq gptel-default-mode 'org-mode)
+    ;; Doesn't work with `auto-fill-mode', so instead we use `visual-line-mode'
+    (add-hook 'gptel-mode-hook 'visual-line-mode))
 #+end_src
 * Arch Package Management
-TODO: Update this section and make it into it's own repository. 
+TODO: Update this section and make it into it's own repository.
 #+begin_src emacs-lisp
   ;;; UTILITY FUNCTIONS FOR DEALING WITH ARCH/PACMAN
 
@@ -1591,5 +1724,6 @@ using the [[Optimization][GCMH]] package to manage garbage collection.
 #+end_src
 
 # Local Variables:
-# jinx-local-words: "Dired Docview Flyspell Keybinds Modeline Nuspell Vterm dired"
+# jinx-local-words: "Dired Docview Flyspell Keybinds Modeline Nuspell Vterm dired eshell gptel"
+# evil-lookup-func: helpful-at-point
 # End:

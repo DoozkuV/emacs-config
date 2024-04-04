@@ -227,6 +227,11 @@ If the file does not exist, it will be created at the specified directory."
   (interactive)
   (dictionary-search (word-at-point)))
 
+(defun gp/man-at-point ()
+"Runs the `man' command on the word at point"
+    (interactive)
+    (man (word-at-point)))
+
 (use-package general
   :config
   (general-create-definer gp/leader-keys
@@ -241,6 +246,7 @@ If the file does not exist, it will be created at the specified directory."
     :non-normal-prefix "C-SPC m")
 
   (gp/leader-keys
+    "u" '(universal-argument :which-key "universal arg")
     ;; Toggles
     "t" '(:ignore t :which-key "toggles")
     "ta" '(auto-fill-mode :which-key "Toggle auto fill")
@@ -249,6 +255,7 @@ If the file does not exist, it will be created at the specified directory."
     "tp" '(electric-pair-mode :which-key "Toggle electric pairs")
     "to" '(gp/opacity-mode :which-key "Toggle opacity")
     "tf" '(flyspell-mode :which-key "Toggle flyspell mode")
+    "tj" '(jinx-mode :which-key "Toggle jinx mode")
     "tF" '(flyspell-prog-mode :which-key "Toggle flyspell prog mode")
 
     ;; Window Management
@@ -606,12 +613,23 @@ If the file does not exist, it will be created at the specified directory."
     "rp" '(racket-run-module-at-point :which-key "Run Module at
   Point")))
 
+(defun gp/markdown-preview-eww ()
+  "Generates a preview of the currently open markdown file in eww"
+  (interactive)
+  (shr-render-buffer (markdown)))
+
 (use-package markdown-mode
   :ensure t
   :mode ("README\\.md\\'" . gfm-mode)
   :init (setq markdown-command "multimarkdown")
   :bind (:map markdown-mode-map
-         ("C-c C-e" . markdown-do)))
+	      ("C-c C-e" . markdown-do))
+  :general
+  (gp/local-leader-keys
+    :keymaps 'markdown-mode-map
+    "r" '(gp/markdown-preview-eww :which-key "Preview in Eww")))
+
+(use-package sweeprolog)
 
 (use-package projectile
   :diminish projectile-mode
@@ -820,13 +838,6 @@ If the file does not exist, it will be created at the specified directory."
   :after org
   :hook (dired-mode . org-download-enable))
 
-(use-package org-excalidraw
-  :ensure (:host github :repo "wdavew/org-excalidraw")
-  :preface
-  (setq org-excalidraw-directory (concat gp/org-directory "/excalidraw"))
-  :if (f-dir-p (expand-file-name org-excalidraw-directory))
-  :after org)
-
 (use-package transient) ;; Fix a weird bug with elpaca
 (use-package magit
   :commands (magit-status magit-dispatch magit-file-dispatch)
@@ -916,13 +927,87 @@ If the file does not exist, it will be created at the specified directory."
   :config
   (add-hook 'speed-type-mode-hook (lambda () (setq-local evil-default-state 'insert))))
 
+;; page-break-lines to start on dashboard mode
+(use-package page-break-lines
+  :hook (dashboard-mode . page-break-lines-mode))
+
+;; Dashboard configuration
 (use-package dashboard
+  :init
+  ;; Set what appears on the dashboard
+  (setq dashboard-items '((projects . 10)
+			  (recents . 10)
+			  (agenda . 5)))
+  ;; Make sure that projectile is used for projects
+  (setq dashboard-projects-backend 'projectile)
+  ;; Set it to use the weekly agenda
+  (setq dashboard-week-agenda t)
+
+  ;; Enable dashboard icons
+  (setq dashboard-set-heading-icons t
+	dashboard-icon-type 'nerd-icons
+	dashboard-set-file-icons t)
+  ;; Set a nicer default logo
+  (setq dashboard-startup-banner 'logo)
+  ;; (setq dashboard-startup-banner 
+  ;; 	  (gp/config-path-file-expand "logos/black-hole.png"))
+  ;; More dashboard info
+  (setq dashboard-set-init-info t)
+  (setq dashboard-set-footer t)
+
+  ;; Utilize the page separator package
+  (setq dashboard-page-separator "\n\n")
+  ;; Initial buffer choice
+  (setq initial-buffer-choice (lambda () (dashboard-open)))
   :config
+  ;; Elpaca setup
   (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
   (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
-  (dashboard-setup-startup-hook)
-  (setq initial-buffer-choice (lambda () (get-buffer-create dashboard-buffer-name)))
-  (setq dashboard-startup-banner 'logo))
+  (dashboard-setup-startup-hook))
+
+(defun gp/test-config (config-path)
+  "Creates an emacs instance and loads the configuration at the specified path"
+  (interactive "DChoose a config path: ")
+  (let ((config-path (expand-file-name config-path)))
+    (unless (f-directory-p config-path)
+      (error "Invalid directory entered"))
+    (start-process
+     "Emacs-Test-Config" nil
+     "emacs" "--init-directory"
+     config-path
+     "--debug-init")))
+
+(use-package gptel
+  :preface
+  ;; Define utility functions for the config
+  (defun gp/get-ollama-installed-models ()
+    "Uses awk to get a list of installed ollama models."
+    (split-string (shell-command-to-string
+		   "ollama list | awk 'NR>1 {print $1}'")))
+  :commands (gptel gptel-menu gptel-mode gptel-send gptel-set-topic)
+  :general
+  (gp/leader-keys
+    "l" '(:ignore t :which-key "llm")
+    "ls" '(gptel-send :which-key "Send point to LLM")
+    ;;  Calls gptel-send with the universal arg enabled
+    "lS" '((lambda () (interactive)
+	    (let ((current-prefix-arg 4))
+	      (call-interactively 'gptel-send)))
+	  :which-key "Transient send point to LLM")
+    "lb" '(gptel :which-key "Start Chat")
+    ;; :keymaps 'org-mode-map
+    "lt" '(gptel-set-topic :which-key "Set context to Org Heading"))
+  :config
+  (setq
+   gptel-model "mistral:latest"
+   gptel-backend (gptel-make-ollama "Ollama"
+				    :host "localhost:11434"
+				    :stream t
+				    :models (gp/get-ollama-installed-models)))
+  ;; Set gptel buffers to use org mode
+  (setq gptel-default-mode 'org-mode)
+  ;; Doesn't work with `auto-fill-mode', so instead we use `visual-line-mode'
+  (add-hook 'gptel-mode-hook 'visual-line-mode))
 
 ;;; UTILITY FUNCTIONS FOR DEALING WITH ARCH/PACMAN
 

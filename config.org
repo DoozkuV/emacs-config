@@ -135,7 +135,7 @@ Enable line numbers for all buffer types and set them to be relative
 to the cursor's line position - just like in Vim.
 #+begin_src emacs-lisp
   (global-display-line-numbers-mode)
-  (setq display-line-numbers-type 'relative)
+  (setq display-line-numbers-type 'visual)
 #+end_src
 
 Now, we want to manually disable line numbers for specific modes. We
@@ -1525,15 +1525,16 @@ Catppuccin color-scheme. Otherwise, we want to enable doom themes and
 set a theme in there
 #+begin_src emacs-lisp
   (use-package doom-themes
-    :if gp/is-desktop
-    :config (load-theme 'doom-dracula :no-confirm)
+    :init
+    (when gp/is-desktop
+      (load-theme 'doom-dracula :no-confirm))
     :commands (load-theme consult-theme))
 
   (use-package catppuccin-theme
-    :if gp/is-laptop
-    :config
-    (load-theme 'catppuccin :no-confirm))
-#+end_src
+    :init
+    (when gp/is-laptop
+      (load-theme 'catppuccin :no-confirm)))
+    #+end_src
 ** Fonts
 The default font is set here.
 #+begin_src emacs-lisp
@@ -1576,7 +1577,8 @@ then we will create a minor mode that enables opacity when enabled.
 
   (provide 'gp/opacity-mode)
   ;; Automatically enable transparency at launch
-  (gp/opacity-mode)
+  (when gp/is-laptop
+    (gp/opacity-mode))
 #+end_src
 ** Rainbow Delimiters
 Set rainbow delimiters for parenthesis, bracekts, etc when in a

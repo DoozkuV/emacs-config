@@ -59,7 +59,7 @@ If the file does not exist, it will be created at the specified directory."
    version-control t)      ; use versioned backups
 
 (global-display-line-numbers-mode)
-(setq display-line-numbers-type 'relative)
+(setq display-line-numbers-type 'visual)
 
 (defcustom gp/line-numbers-disabled-modes
   '(term-mode-hook
@@ -1097,14 +1097,15 @@ If programs is nil, it will act as if nothing is there."
  (lambda () (setq-local scroll-margin 0)))
 
 (use-package doom-themes
-  :if gp/is-desktop
-  :config (load-theme 'doom-dracula :no-confirm)
+  :init
+  (when gp/is-desktop
+    (load-theme 'doom-dracula :no-confirm))
   :commands (load-theme consult-theme))
 
 (use-package catppuccin-theme
-  :if gp/is-laptop
-  :config
-  (load-theme 'catppuccin :no-confirm))
+  :init
+  (when gp/is-laptop
+    (load-theme 'catppuccin :no-confirm)))
 
 (set-face-attribute 'default nil :font "RobotoMono Nerd Font" :height 110)
 
@@ -1136,7 +1137,8 @@ If programs is nil, it will act as if nothing is there."
 
 (provide 'gp/opacity-mode)
 ;; Automatically enable transparency at launch
-(gp/opacity-mode)
+(when gp/is-laptop
+  (gp/opacity-mode))
 
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
